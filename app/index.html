@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FallGuard - AI Fall Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+       	body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #3f3f3f 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .live-indicator {
+            animation: pulse-red 1.5s infinite;
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .fall-alert {
+            animation: flash-alert 0.5s infinite alternate;
+        }
+        
+        @keyframes flash-alert {
+            from { background-color: #dc2626; }
+            to { background-color: #991b1b; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        
+        .camera-thumbnail {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .camera-thumbnail:hover {
+            transform: scale(1.05);
+            border-color: #3b82f6;
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+        }
+        
+        .camera-thumbnail.active {
+            border-color: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+        
+        .camera-thumbnail.fall-detected {
+            border-color: #ef4444;
+            animation: pulse-red 1s infinite;
+        }
+        
+        .main-feed {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .main-feed img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    
+    <!-- Landing Page -->
+    <div id="landing-page" class="hero-section gradient-bg">
+        <!-- Top Navigation -->
+        <nav class="absolute top-0 left-0 right-0 z-20 px-6 py-4 bg-gradient-to-b from-black/50 to-transparent">
+            <div class="container mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img id="logo-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E" alt="FallGuard Logo" class="w-10 h-10 bg-white/20 rounded-lg p-2" title="Click to change logo">
+                    <span class="text-xl font-bold text-white">FallGuard</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="goToLearnMore()" class="text-sm font-semibold hover:text-blue-400 transition">
+                        Learn More
+                    </button>
+                    <button onclick="goToLiveFeed()" class="glass-effect px-6 py-2 rounded-full text-sm font-semibold hover:bg-white/20 transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        Sign In
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="text-center max-w-5xl mx-auto fade-in">
+                <div class="mb-12">
+                    <svg class="w-32 h-32 mx-auto text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                
+                <h1 class="text-6xl md:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl">
+                    FallGuard: Protect Your Loved Ones
+                </h1>
+                
+                <p class="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto font-light leading-relaxed">
+                    A lightweight fall detection system<br>
+                    for ultimate peace of mind and<br>
+                    keeping your family safe.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-6 justify-center">
+                    <button onclick="goToLearnMore()" class="group relative inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 shadow-2xl">
+                        <span>LEARN MORE</span>
+                        <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learn More Page -->
+    <div id="learn-more-page" class="hidden min-h-screen bg-gray-900 text-white">
+        <!-- Top Navigation -->
+        <nav class="sticky top-0 z-20 px-6 py-4 bg-gray-800 shadow-lg">
+            <div class="container mx-auto flex items-center justify-between">
+                <button onclick="goToHomepage()" class="flex items-center gap-3 hover:opacity-80 transition">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold">FallGuard</span>
+                </button>
+                <button onclick="goToLiveFeed()" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg font-semibold transition">
+                    Sign In
+                </button>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 py-20">
+            <div class="container mx-auto px-6">
+                <h2 class="text-5xl md:text-6xl font-bold mb-6">Peace of mind for your family</h2>
+                <p class="text-xl text-gray-300 max-w-2xl">Advanced AI-powered fall detection that keeps your loved ones safe, automatically.</p>
+            </div>
+        </div>
+
+        <!-- What We Offer Section -->
+        <div class="py-20 px-6">
+            <div class="container mx-auto">
+                <h3 class="text-4xl font-bold mb-16 text-center">What We Offer:</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    <!-- Feature 1 -->
+                    <div class="bg-gray-800 rounded-xl p-8 hover:bg-gray-750 transition">
+                        <div class="text-5xl mb-6">⚡</div>
+                        <h4 class="text-2xl font-bold mb-4">Efficient & Agile</h4>
+                        <p class="text-gray-300 text-lg">
+                            We offer a lightweight fall detection system that can run smoothly and efficiently on your system
+                        </p>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="bg-gray-800 rounded-xl p-8 hover:bg-gray-750 transition">
+                        <div class="text-5xl mb-6">🔔</div>
+                        <h4 class="text-2xl font-bold mb-4">Instant Alerts</h4>
+                        <p class="text-gray-300 text-lg">
+                            Get real-time notifications via Telegram when a fall is detected. Stay informed instantly.
+                        </p>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="bg-gray-800 rounded-xl p-8 hover:bg-gray-750 transition">
+                        <div class="text-5xl mb-6">🚨</div>
+                        <h4 class="text-2xl font-bold mb-4">Emergency SOS</h4>
+                        <p class="text-gray-300 text-lg">
+                            Rapid response system with emergency alerts and detailed fall detection confidence scores.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Key Benefits -->
+                <div class="bg-blue-600 rounded-xl p-12 mb-16">
+                    <h3 class="text-3xl font-bold mb-8">Why Choose FallGuard?</h3>
+                    <ul class="space-y-4 text-lg">
+                        <li class="flex items-center gap-4">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span>AI-powered accuracy with real-time detection</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span>Multi-camera support for comprehensive coverage</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span>Instant Telegram notifications for peace of mind</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span>Lightweight and efficient system</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- CTA Button -->
+                <div class="text-center">
+                    <button onclick="goToLiveFeed()" class="bg-blue-500 hover:bg-blue-600 px-12 py-4 rounded-lg font-bold text-xl transition transform hover:scale-105">
+                        Get Started Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Live Feed Dashboard -->
+    <div id="live-feed" class="hidden min-h-screen bg-gray-900 p-4">
+        <!-- Header -->
+        <header class="bg-gray-800 rounded-xl p-4 mb-4 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-4">
+                <button onclick="goToHomepage()" class="text-gray-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold">FallGuard Dashboard</h1>
+                    <p class="text-sm text-gray-400">AI Fall Detection System</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="status-badge bg-red-600 live-indicator">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>LIVE</span>
+                </div>
+                <button onclick="openAdminPanel()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Admin Panel
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" style="height: calc(100vh - 120px);">
+            <!-- Main Feed (Left) -->
+            <div class="lg:col-span-2 bg-gray-800 rounded-xl overflow-hidden relative shadow-2xl">
+                <div class="main-feed">
+                    <img id="main-stream-img" 
+                         src="/video_feed/main_webcam_0" 
+                         alt="Main Feed"
+                         onerror="handleMainStreamError(this)"
+                         onload="handleMainStreamLoad(this)">
+                    <div id="main-stream-error" class="hidden absolute inset-0 bg-gray-900 flex items-center justify-center flex-col">
+                        <svg class="w-24 h-24 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-gray-400 text-lg">Camera stream unavailable</p>
+                        <p class="text-gray-500 text-sm mt-2">Click a camera thumbnail to try again</p>
+                    </div>
+                </div>
+                
+                <!-- Main Feed Overlay Info -->
+                <div class="absolute top-4 left-4 flex gap-2">
+                    <div id="main-status-badge" class="status-badge bg-green-600">
+                        <span class="w-2 h-2 bg-white rounded-full live-indicator"></span>
+                        <span>NORMAL</span>
+                    </div>
+                </div>
+                
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+                    <h2 id="main-stream-name" class="text-2xl font-bold mb-1">Main Webcam Stream</h2>
+                </div>
+                
+                <!-- Fall Alert Banner -->
+                <div id="fall-alert-overlay" class="hidden absolute bottom-0 left-0 right-0 bg-red-600 text-white shadow-2xl">
+                    <div class="fall-alert px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="text-3xl animate-bounce">⚠️</div>
+                            <div>
+                                <h3 class="text-xl font-bold">FALL DETECTED!</h3>
+                                <p id="fall-location" class="text-sm opacity-90">Camera Location</p>
+                            </div>
+                        </div>
+                        <button onclick="dismissAlert()" class="text-white hover:text-gray-200 text-2xl font-bold px-3">&times;</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Camera Grid (Right) -->
+            <div class="bg-gray-800 rounded-xl p-4 overflow-y-auto shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">All Cameras</h3>
+                    <button onclick="openCameraManager()" class="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition">
+                        <span class="text-xl">+</span>
+                    </button>
+                </div>
+                
+                <div id="camera-grid" class="video-grid">
+                    <!-- Camera thumbnails will be inserted here -->
+                </div>
+                
+                <div id="no-cameras" class="hidden text-center py-12 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <p>No cameras available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <h2 class="text-2xl font-bold mb-6 text-center">Admin Login</h2>
+            <form id="admin-login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Password</label>
+                    <input type="password" id="admin-password" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter admin password" required autofocus>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
+                    Login
+                </button>
+                <button type="button" onclick="closeAdminLogin()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg transition">
+                    Cancel
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Admin Panel Modal -->
+    <div id="admin-panel-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-gray-800 z-10">
+                <h2 class="text-2xl font-bold">Admin Panel</h2>
+                <div class="flex items-center gap-3">
+                    <button onclick="logoutAdmin()" class="text-sm px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition">
+                        Logout
+                    </button>
+                    <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- Detection Settings -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <h3 class="text-lg font-bold mb-4">Detection Parameters</h3>
+                    <form id="settings-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Fall Probability Threshold</label>
+                            <input type="number" id="fall-threshold" step="0.01" min="0" max="1" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" value="0.70">
+                            <p class="text-xs text-gray-500 mt-1">Confidence level required (0.0 - 1.0)</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Confirmation Delay (seconds)</label>
+                            <input type="number" id="fall-delay" min="1" max="10" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" value="2">
+                            <p class="text-xs text-gray-500 mt-1">Continuous detection time before alert</p>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">
+                            Save Settings
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Telegram Configuration -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">Telegram Notifications</h3>
+                        <button type="button" onclick="openTelegramSubscribers()" class="text-3xl hover:text-purple-400 transition" title="Manage Subscribers">
+                            🔔
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Bot Token</label>
+                            <div class="flex gap-2">
+                                <input type="password" id="telegram-token" placeholder="Paste your Telegram bot token here" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <button type="button" onclick="saveTelegramToken()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
+                                    Save Token
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Get token from <a href="https://t.me/BotFather" target="_blank" class="text-blue-400 hover:text-blue-300">/start @BotFather</a> on Telegram</p>
+                        </div>
+                        
+                        <div id="telegram-status" class="text-sm text-gray-400 hidden">
+                            <p><span id="telegram-status-text">Bot configured</span></p>
+                        </div>
+                        
+                        <button type="button" onclick="testTelegramAlert()" id="test-alert-btn" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            Test Alert
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Connected Subscribers Section -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">📱 Connected Subscribers</h3>
+                        <span id="subscriber-count" class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">0</span>
+                    </div>
+                    
+                    <div id="admin-subscribers-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Users can send /start to your bot!</p>
+                    </div>
+                </div>
+
+                <!-- Blocked Users Section -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">🚫 Blocked Users</h3>
+                        <span id="blocked-count" class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">0</span>
+                    </div>
+                    
+                    <div id="admin-blocked-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-sm text-center py-4">No blocked users. Removed subscribers will appear here.</p>
+                    </div>
+                </div>
+
+                <!-- Camera Status Section -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <h3 class="text-lg font-bold mb-4">Camera Status & Monitoring</h3>
+                    <div id="camera-status-list" class="space-y-3">
+                        <p class="text-gray-500 text-sm text-center py-4">Loading camera information...</p>
+                    </div>
+                </div>
+                
+                <!-- Add Camera -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <h3 class="text-lg font-bold mb-4">Add Camera Source</h3>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <button id="tab-webcam" onclick="switchTab('webcam')" class="flex-1 py-2 rounded-lg bg-blue-600 font-semibold">Webcam/URL</button>
+                        <button id="tab-upload" onclick="switchTab('upload')" class="flex-1 py-2 rounded-lg bg-gray-700 font-semibold">Video File</button>
+                    </div>
+                    
+                    <form id="add-camera-form" class="space-y-4">
+                        <input type="text" id="camera-name" placeholder="Camera Name (e.g., Living Room)" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                        <div>
+                            <input type="text" id="camera-source" placeholder="Source (0 for webcam, URL, or path)" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            <p class="text-xs text-gray-500 mt-2">Examples: 0, 1, 2 (webcam index) or http://192.168.1.100:8080/video</p>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
+                            Add Camera
+                        </button>
+                    </form>
+                    
+                    <form id="upload-form" class="space-y-4 hidden">
+                        <input type="text" id="upload-name" placeholder="Stream Name (e.g., Test Fall Video)" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                        <div class="w-full">
+                            <label class="block text-sm font-medium mb-2 text-gray-300">Select Video File</label>
+                            <input type="file" id="video-file" accept="video/*" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer hover:file:bg-blue-700 cursor-pointer" required>
+                            <p class="text-xs text-gray-500 mt-2">Supported: MP4, AVI, MOV, MKV (Max 500MB)</p>
+                        </div>
+                        <div id="upload-progress" class="hidden">
+                            <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                                <div id="upload-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <p id="upload-progress-text" class="text-sm text-gray-400 text-center">Uploading...</p>
+                        </div>
+                        <button type="submit" id="upload-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
+                            Upload & Start Stream
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Camera Manager Modal -->
+    <div id="camera-manager-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-700 flex items-center justify-between">
+                <h2 class="text-2xl font-bold">Manage Cameras</h2>
+                <button onclick="closeCameraManager()" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6">
+                <div id="camera-list" class="space-y-2">
+                    <p class="text-gray-500 text-sm text-center py-4">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Telegram Subscribers Modal -->
+    <div id="telegram-subscribers-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-gray-800 z-10">
+                <h2 class="text-2xl font-bold">Telegram Subscribers</h2>
+                <button onclick="closeTelegramSubscribers()" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- How to Add Users -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">How to add subscribers:</h3>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-400 font-bold mt-0.5">1.</span>
+                            <span>Users can send <code class="bg-gray-800 px-1 py-0.5 rounded text-yellow-300">/start</code> to your bot (automatic)</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-400 font-bold mt-0.5">2.</span>
+                            <span>Or manually add their Chat ID below</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Manual Add -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">Add Manually</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Chat ID</label>
+                            <input type="text" id="manual-chat-id" placeholder="e.g., 123456789" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <p class="text-xs text-gray-500 mt-1">User's unique Telegram ID (numbers only)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Name (optional)</label>
+                            <input type="text" id="manual-name" placeholder="e.g., John's Phone" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <button type="button" onclick="addManualSubscriber()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
+                            Add Subscriber
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Subscribers List -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">Active Subscribers</h3>
+                    <div id="subscribers-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-sm text-center py-4">Loading subscribers...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // State Management
+        const state = {
+            cameras: [],
+            mainStreamId: 'main_webcam_0',
+            pollingInterval: null,
+            isAdminAuthenticated: false,
+            settings: {
+                fall_threshold: 0.70,
+                fall_delay_seconds: 2
+            }
+        };
+
+        // Navigation
+        function goToLiveFeed() {
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('live-feed').classList.remove('hidden');
+            startPolling();
+        }
+
+        function goToLanding() {
+            document.getElementById('live-feed').classList.add('hidden');
+            document.getElementById('landing-page').classList.remove('hidden');
+            stopPolling();
+        }
+
+        // Admin Authentication
+        async function checkAdminAuth() {
+            try {
+                const response = await fetch('/api/admin/check');
+                const data = await response.json();
+                state.isAdminAuthenticated = data.authenticated;
+                return data.authenticated;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                return false;
+            }
+        }
+
+        function openAdminLogin() {
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-password').focus();
+        }
+
+        function openAdminLoginFromNav() {
+            openAdminLogin();
+        }
+
+        // Page Navigation with Session Persistence
+        function getCurrentPage() {
+            return sessionStorage.getItem('currentPage') || 'landing';
+        }
+
+        function setCurrentPage(page) {
+            sessionStorage.setItem('currentPage', page);
+        }
+
+        function goToHomepage() {
+            setCurrentPage('landing');
+            document.getElementById('landing-page').classList.remove('hidden');
+            document.getElementById('learn-more-page').classList.add('hidden');
+            document.getElementById('live-feed').classList.add('hidden');
+            document.getElementById('admin-login-modal').classList.add('hidden');
+            document.getElementById('admin-panel-modal').classList.add('hidden');
+        }
+
+        function goToLearnMore() {
+            setCurrentPage('learn-more');
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('learn-more-page').classList.remove('hidden');
+            document.getElementById('live-feed').classList.add('hidden');
+            document.getElementById('admin-login-modal').classList.add('hidden');
+            document.getElementById('admin-panel-modal').classList.add('hidden');
+        }
+
+        function goToLiveFeed() {
+            setCurrentPage('live-feed');
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('learn-more-page').classList.add('hidden');
+            document.getElementById('live-feed').classList.remove('hidden');
+        }
+
+        function restorePageFromSession() {
+            const currentPage = getCurrentPage();
+            if (currentPage === 'learn-more') {
+                goToLearnMore();
+            } else if (currentPage === 'live-feed') {
+                goToLiveFeed();
+            } else {
+                goToHomepage();
+            }
+        }
+
+        function closeAdminLogin() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+        }
+
+        async function openAdminPanel() {
+            const isAuth = await checkAdminAuth();
+            if (isAuth) {
+                document.getElementById('admin-panel-modal').classList.remove('hidden');
+                loadSettings();
+                loadTelegramStatus();
+                loadAdminSubscribersList();
+                loadAdminBlockedList();
+                loadCameraStatusList();
+            } else {
+                openAdminLogin();
+            }
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('admin-panel-modal').classList.add('hidden');
+        }
+
+        async function logoutAdmin() {
+            try {
+                await fetch('/api/admin/logout', { method: 'POST' });
+                state.isAdminAuthenticated = false;
+                closeAdminPanel();
+                showToast('Logged out successfully', 'info');
+            } catch (error) {
+                showToast('Logout failed', 'error');
+            }
+        }
+
+        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('admin-password').value;
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    state.isAdminAuthenticated = true;
+                    closeAdminLogin();
+                    openAdminPanel();
+                    showToast('Login successful', 'success');
+                } else {
+                    showToast('Invalid password', 'error');
+                    document.getElementById('admin-password').value = '';
+                    document.getElementById('admin-password').focus();
+                }
+            } catch (error) {
+                showToast('Login failed', 'error');
+            }
+        });
+
+        // Camera Manager
+        function openCameraManager() {
+            document.getElementById('camera-manager-modal').classList.remove('hidden');
+            loadCameraList();
+        }
+
+        function closeCameraManager() {
+            document.getElementById('camera-manager-modal').classList.add('hidden');
+        }
+
+        async function loadCameraList() {
+            try {
+                const data = await apiCall('/cameras/all_definitions');
+                const list = document.getElementById('camera-list');
+                
+                if (data.definitions.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No cameras configured</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.definitions.map(cam => `
+                    <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                        <div class="flex-1">
+                            <p class="font-semibold">${cam.name}</p>
+                            <p class="text-xs text-gray-500">Source: ${cam.source}</p>
+                            <p class="text-xs ${cam.isLive ? 'text-green-500' : 'text-gray-500'}">
+                                ${cam.isLive ? '● Live' : '○ Stopped'}
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            ${cam.isLive ? 
+                                `<button onclick="stopCamera('${cam.id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition">Stop</button>` :
+                                `<button onclick="startCamera('${cam.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition">Start</button>`
+                            }
+                            <button onclick="removeCamera('${cam.id}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm font-medium transition">Remove</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load camera list:', error);
+            }
+        }
+
+        async function loadCameraStatusList() {
+            try {
+                const data = await apiCall('/cameras/all_definitions');
+                const container = document.getElementById('camera-status-list');
+                
+                if (data.definitions.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No cameras configured</p>';
+                    return;
+                }
+                
+                container.innerHTML = data.definitions.map(cam => {
+                    const statusColor = cam.isLive ? 
+                        (cam.status === 'FALL DETECTED' ? 'text-red-500' : 'text-green-500') : 
+                        'text-gray-500';
+                    
+                    return `
+                        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-bold text-lg">${cam.name}</h4>
+                                <span class="status-badge ${cam.isLive ? (cam.status === 'FALL DETECTED' ? 'bg-red-600' : 'bg-green-600') : 'bg-gray-600'}">
+                                    ${cam.isLive ? '● LIVE' : '○ OFFLINE'}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <p class="text-gray-400">Status</p>
+                                    <p class="${statusColor} font-semibold">${cam.status || 'Offline'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">FPS</p>
+                                    <p class="text-white font-semibold">${cam.fps ? cam.fps.toFixed(1) : '0.0'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Confidence</p>
+                                    <p class="text-white font-semibold">${cam.confidence_score ? (cam.confidence_score * 100).toFixed(1) + '%' : '0.0%'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Source</p>
+                                    <p class="text-white font-semibold truncate">${cam.source}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Failed to load camera status:', error);
+            }
+        }
+
+        function switchTab(tab) {
+            const webcamBtn = document.getElementById('tab-webcam');
+            const uploadBtn = document.getElementById('tab-upload');
+            const webcamForm = document.getElementById('add-camera-form');
+            const uploadForm = document.getElementById('upload-form');
+
+            if (tab === 'webcam') {
+                webcamBtn.classList.add('bg-blue-600');
+                webcamBtn.classList.remove('bg-gray-700');
+                uploadBtn.classList.remove('bg-blue-600');
+                uploadBtn.classList.add('bg-gray-700');
+                webcamForm.classList.remove('hidden');
+                uploadForm.classList.add('hidden');
+            } else {
+                uploadBtn.classList.add('bg-blue-600');
+                uploadBtn.classList.remove('bg-gray-700');
+                webcamBtn.classList.remove('bg-blue-600');
+                webcamBtn.classList.add('bg-gray-700');
+                uploadForm.classList.remove('hidden');
+                webcamForm.classList.add('hidden');
+            }
+        }
+
+        // Telegram Functions
+        async function loadTelegramStatus() {
+            try {
+                const data = await apiCall('/settings');
+                const statusDiv = document.getElementById('telegram-status');
+                const testBtn = document.getElementById('test-alert-btn');
+                const tokenInput = document.getElementById('telegram-token');
+                
+                if (data.telegram_token) {
+                    statusDiv.classList.remove('hidden');
+                    const botName = data.telegram_bot_name || 'Bot';
+                    document.getElementById('telegram-status-text').textContent = `✅ Connected: ${botName}`;
+                    testBtn.disabled = false;
+                    tokenInput.placeholder = '(Token already configured)';
+                } else {
+                    statusDiv.classList.add('hidden');
+                    testBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Failed to load telegram status:', error);
+            }
+        }
+
+        async function saveTelegramToken() {
+            const token = document.getElementById('telegram-token').value.trim();
+            
+            if (!token) {
+                showToast('Please enter a bot token', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/telegram/set_token', {
+                    method: 'POST',
+                    body: JSON.stringify({ token })
+                });
+                
+                if (response.success) {
+                    showToast('Bot token saved successfully!', 'success');
+                    document.getElementById('telegram-token').value = '';
+                    await loadTelegramStatus();
+                } else {
+                    showToast(response.message || 'Failed to save token', 'error');
+                }
+            } catch (error) {
+                showToast('Invalid token or connection failed', 'error');
+            }
+        }
+
+        async function testTelegramAlert() {
+            const testBtn = document.getElementById('test-alert-btn');
+            testBtn.disabled = true;
+            testBtn.innerHTML = '⏳ Sending...';
+            
+            try {
+                const response = await apiCall('/telegram/test_alert', {
+                    method: 'POST'
+                });
+                
+                if (response.success) {
+                    showToast(`Test alert sent to ${response.sent_count} subscriber(s)`, 'success');
+                } else {
+                    showToast(response.message || 'Failed to send test alert', 'error');
+                }
+            } catch (error) {
+                showToast('No subscribers configured', 'warning');
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = 'Test Alert';
+            }
+        }
+
+        function openTelegramSubscribers() {
+            document.getElementById('telegram-subscribers-modal').classList.remove('hidden');
+            loadTelegramSubscribers();
+        }
+
+        function closeTelegramSubscribers() {
+            document.getElementById('telegram-subscribers-modal').classList.add('hidden');
+        }
+
+        async function loadTelegramSubscribers() {
+            try {
+                const response = await apiCall('/telegram/subscribers');
+                const list = document.getElementById('subscribers-list');
+                
+                if (!response.subscribers || response.subscribers.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Ask users to send /start to your bot!</p>';
+                    return;
+                }
+                
+                list.innerHTML = response.subscribers.map(sub => `
+                    <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium">${escapeHtml(sub.name || 'Unknown')}</p>
+                            <p class="text-xs text-gray-400">ID: ${sub.chat_id}</p>
+                            ${sub.username ? `<p class="text-xs text-gray-400">@${escapeHtml(sub.username)}</p>` : ''}
+                        </div>
+                        <button type="button" onclick="removeSubscriber('${sub.chat_id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition">
+                            Remove
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load subscribers:', error);
+                document.getElementById('subscribers-list').innerHTML = '<p class="text-red-400 text-sm">Failed to load subscribers</p>';
+            }
+        }
+
+        async function loadAdminSubscribersList() {
+            try {
+                const response = await apiCall('/telegram/subscribers');
+                const list = document.getElementById('admin-subscribers-list');
+                const count = document.getElementById('subscriber-count');
+                
+                if (!response.subscribers || response.subscribers.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Users can send /start to your bot!</p>';
+                    count.textContent = '0';
+                    return;
+                }
+                
+                count.textContent = response.subscribers.length;
+                
+                list.innerHTML = response.subscribers.map(sub => `
+                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="font-semibold text-white">${escapeHtml(sub.name || 'Unknown')}</p>
+                            <div class="flex gap-2">
+                                <span class="text-xs bg-green-600 text-white px-2 py-1 rounded">✅ Active</span>
+                                <button type="button" onclick="removeSubscriberAdmin('${sub.chat_id}', '${escapeHtml(sub.name || 'Unknown')}')" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400">Chat ID: <code class="bg-gray-900 px-1 py-0.5 rounded">${sub.chat_id}</code></p>
+                        ${sub.username ? `<p class="text-xs text-gray-400">Telegram: <code class="bg-gray-900 px-1 py-0.5 rounded">@${escapeHtml(sub.username)}</code></p>` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load admin subscribers:', error);
+            }
+        }
+
+        async function addManualSubscriber() {
+            const chatId = document.getElementById('manual-chat-id').value.trim();
+            const name = document.getElementById('manual-name').value.trim();
+            
+            if (!chatId) {
+                showToast('Please enter a Chat ID', 'warning');
+                return;
+            }
+            
+            if (!/^\d+$/.test(chatId)) {
+                showToast('Chat ID must contain only numbers', 'error');
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/telegram/add_subscriber', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        name: name || 'Manual Entry'
+                    })
+                });
+                
+                if (response.success) {
+                    showToast('Subscriber added successfully!', 'success');
+                    document.getElementById('manual-chat-id').value = '';
+                    document.getElementById('manual-name').value = '';
+                    await loadTelegramSubscribers();
+                    await loadAdminSubscribersList();
+                } else {
+                    showToast(response.message || 'Failed to add subscriber', 'error');
+                }
+            } catch (error) {
+                showToast('Error adding subscriber', 'error');
+            }
+        }
+
+        async function removeSubscriber(chatId) {
+            if (!confirm('Remove this subscriber?')) return;
+            
+            try {
+                const response = await apiCall('/telegram/remove_subscriber', {
+                    method: 'POST',
+                    body: JSON.stringify({ chat_id: chatId })
+                });
+                
+                if (response.success) {
+                    showToast('Subscriber removed', 'success');
+                    await loadTelegramSubscribers();
+                    await loadAdminSubscribersList();
+                } else {
+                    showToast('Failed to remove subscriber', 'error');
+                }
+            } catch (error) {
+                showToast('Error removing subscriber', 'error');
+            }
+        }
+
+        async function removeSubscriberAdmin(chatId, name) {
+            if (!confirm(`Remove subscriber "${name}" (Chat ID: ${chatId})?`)) return;
+            
+            try {
+                const response = await apiCall('/telegram/remove_subscriber', {
+                    method: 'POST',
+                    body: JSON.stringify({ chat_id: chatId })
+                });
+                
+                if (response.success) {
+                    showToast('Subscriber removed', 'success');
+                    await loadTelegramSubscribers();
+                    await loadAdminSubscribersList();
+                    await loadAdminBlockedList();
+                } else {
+                    showToast('Failed to remove subscriber', 'error');
+                }
+            } catch (error) {
+                showToast('Error removing subscriber', 'error');
+            }
+        }
+
+        async function loadAdminBlockedList() {
+            try {
+                const response = await apiCall('/telegram/blocked');
+                const list = document.getElementById('admin-blocked-list');
+                const count = document.getElementById('blocked-count');
+                
+                if (!response.blocked || response.blocked.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No blocked users. Removed subscribers will appear here.</p>';
+                    count.textContent = '0';
+                    return;
+                }
+                
+                count.textContent = response.blocked.length;
+                
+                list.innerHTML = response.blocked.map(chatId => `
+                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-red-500 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="font-semibold text-white">Chat ID: ${chatId}</p>
+                            <button type="button" onclick="unblockUser('${chatId}')" class="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition">
+                                Unblock
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400">Blocked from receiving alerts</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load blocked list:', error);
+            }
+        }
+
+        async function unblockUser(chatId) {
+            if (!confirm(`Unblock user ${chatId}? They will be able to subscribe again.`)) return;
+            
+            try {
+                const response = await apiCall('/telegram/unblock', {
+                    method: 'POST',
+                    body: JSON.stringify({ chat_id: chatId })
+                });
+                
+                if (response.success) {
+                    showToast('User unblocked successfully', 'success');
+                    await loadAdminBlockedList();
+                } else {
+                    showToast('Failed to unblock user', 'error');
+                }
+            } catch (error) {
+                showToast('Error unblocking user', 'error');
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                warning: 'bg-yellow-600',
+                info: 'bg-blue-600'
+            };
+            
+            const toast = document.createElement('div');
+            toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-xl fade-in`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // API Calls
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`/api${endpoint}`, {
+                    headers: {'Content-Type': 'application/json'},
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        showToast('Unauthorized - Please login', 'error');
+                        state.isAdminAuthenticated = false;
+                        closeAdminPanel();
+                        closeCameraManager();
+                        throw new Error('Unauthorized');
+                    }
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                return response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                if (error.message !== 'Unauthorized') {
+                    showToast('Operation failed', 'error');
+                }
+                throw error;
+            }
+        }
+
+        // Settings
+        async function loadSettings() {
+            try {
+                const data = await apiCall('/settings');
+                state.settings = data.settings;
+                document.getElementById('fall-threshold').value = data.settings.fall_threshold;
+                document.getElementById('fall-delay').value = data.settings.fall_delay_seconds;
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        document.getElementById('settings-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await apiCall('/settings', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        fall_threshold: parseFloat(document.getElementById('fall-threshold').value),
+                        fall_delay_seconds: parseInt(document.getElementById('fall-delay').value)
+                    })
+                });
+                showToast('Settings saved successfully');
+                loadCameraStatusList();
+            } catch (error) {
+                // Error already handled by apiCall
+            }
+        });
+
+        // Camera Management
+        async function loadCameras() {
+            try {
+                const data = await apiCall('/cameras');
+                state.cameras = data.cameras;
+                
+                const currentCamera = state.cameras.find(c => c.id === state.mainStreamId);
+                if (!currentCamera || !currentCamera.isLive) {
+                    const firstLive = state.cameras.find(c => c.isLive);
+                    if (firstLive) {
+                        state.mainStreamId = firstLive.id;
+                    }
+                }
+                
+                renderCameraGrid();
+                updateMainFeed();
+            } catch (error) {
+                console.error('Failed to load cameras:', error);
+            }
+        }
+
+        function renderCameraGrid() {
+            const grid = document.getElementById('camera-grid');
+            const noMsg = document.getElementById('no-cameras');
+            
+            if (state.cameras.length === 0) {
+                grid.classList.add('hidden');
+                noMsg.classList.remove('hidden');
+                return;
+            }
+            
+            grid.classList.remove('hidden');
+            noMsg.classList.add('hidden');
+            
+            grid.innerHTML = state.cameras.map(cam => {
+                const isActive = cam.id === state.mainStreamId;
+                const isFall = cam.color === 'red';
+                const isLive = cam.isLive;
+                
+                return `
+                <div class="camera-thumbnail ${isActive ? 'active' : ''} ${isFall ? 'fall-detected' : ''}" 
+                     onclick="switchMainFeed('${cam.id}')"
+                     data-camera-id="${cam.id}">
+                    ${isLive ? `
+                        <img src="/video_feed/${cam.id}" 
+                             class="w-full h-full object-cover"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                             onload="this.style.display='block'; if(this.nextElementSibling) this.nextElementSibling.style.display='none';"
+                             style="display: block;">
+                        <div class="absolute inset-0 bg-gray-700 flex items-center justify-center flex-col text-center p-2" style="display: none;">
+                            <svg class="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <p class="text-xs">Stream Error</p>
+                        </div>
+                    ` : `
+                        <div class="absolute inset-0 bg-gray-700 flex items-center justify-center flex-col text-center p-2">
+                            <svg class="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                            </svg>
+                            <p class="text-xs">Offline</p>
+                        </div>
+                    `}
+                    <div class="absolute top-2 left-2 status-badge ${isFall ? 'bg-red-600' : isLive ? 'bg-green-600' : 'bg-gray-600'} text-xs">
+                        ${isFall ? '⚠️ FALL' : isLive ? '✓ OK' : '○ OFF'}
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                        <p class="text-xs font-semibold truncate">${cam.name}</p>
+                        ${!isLive ? '<p class="text-xs text-gray-400">Camera stopped</p>' : ''}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function switchMainFeed(cameraId) {
+            state.mainStreamId = cameraId;
+            const img = document.getElementById('main-stream-img');
+            const errorDiv = document.getElementById('main-stream-error');
+            
+            img.style.display = 'block';
+            errorDiv.classList.add('hidden');
+            img.src = `/video_feed/${cameraId}`;
+            
+            renderCameraGrid();
+            updateMainFeed();
+        }
+
+        function handleMainStreamError(img) {
+            img.style.display = 'none';
+            document.getElementById('main-stream-error').classList.remove('hidden');
+        }
+
+        function handleMainStreamLoad(img) {
+            img.style.display = 'block';
+            document.getElementById('main-stream-error').classList.add('hidden');
+        }
+
+        function updateMainFeed() {
+            const camera = state.cameras.find(c => c.id === state.mainStreamId);
+            if (!camera) return;
+            
+            const badge = document.getElementById('main-status-badge');
+            const name = document.getElementById('main-stream-name');
+            const alert = document.getElementById('fall-alert-overlay');
+            
+            name.textContent = camera.name;
+            
+            if (camera.color === 'red') {
+                badge.className = 'status-badge bg-red-600 fall-alert';
+                badge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>FALL DETECTED</span>';
+                alert.classList.remove('hidden');
+                document.getElementById('fall-location').textContent = camera.name;
+            } else {
+                badge.className = 'status-badge bg-green-600';
+                badge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>NORMAL</span>';
+                alert.classList.add('hidden');
+            }
+        }
+
+        function dismissAlert() {
+            document.getElementById('fall-alert-overlay').classList.add('hidden');
+        }
+
+        // Add Camera
+        document.getElementById('add-camera-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await apiCall('/cameras/add', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: document.getElementById('camera-name').value,
+                        source: document.getElementById('camera-source').value
+                    })
+                });
+                showToast('Camera added successfully');
+                e.target.reset();
+                loadCameras();
+                loadCameraStatusList();
+            } catch (error) {
+                // Error already handled
+            }
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nameInput = document.getElementById('upload-name');
+            const fileInput = document.getElementById('video-file');
+            const submitBtn = document.getElementById('upload-submit-btn');
+            const progressDiv = document.getElementById('upload-progress');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
+            
+            if (!nameInput.value || !fileInput.files[0]) {
+                showToast('Please provide a name and select a video file', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const maxSize = 500 * 1024 * 1024;
+            
+            if (file.size > maxSize) {
+                showToast('File too large. Maximum size is 500MB', 'error');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span>Uploading...';
+            progressDiv.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Uploading...';
+            
+            const formData = new FormData();
+            formData.append('name', nameInput.value);
+            formData.append('video_file', file);
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressBar.style.width = percentComplete + '%';
+                        progressText.textContent = `Uploading: ${Math.round(percentComplete)}%`;
+                    }
+                });
+                
+                xhr.addEventListener('load', async () => {
+                    if (xhr.status === 200) {
+                        const data = JSON.parse(xhr.responseText);
+                        
+                        if (data.success) {
+                            progressText.textContent = 'Processing video...';
+                            progressBar.style.width = '100%';
+                            
+                            showToast('Video uploaded successfully!', 'success');
+                            e.target.reset();
+                            
+                            await loadCameras();
+                            loadCameraStatusList();
+                            
+                            if (data.camera_id) {
+                                setTimeout(() => {
+                                    switchMainFeed(data.camera_id);
+                                }, 500);
+                            }
+                        } else {
+                            showToast(data.message || 'Upload failed', 'error');
+                        }
+                    } else if (xhr.status === 401) {
+                        showToast('Unauthorized - Please login', 'error');
+                        state.isAdminAuthenticated = false;
+                        closeAdminPanel();
+                    } else {
+                        showToast('Upload failed: Server error', 'error');
+                    }
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Upload & Start Stream';
+                    progressDiv.classList.add('hidden');
+                });
+                
+                xhr.addEventListener('error', () => {
+                    showToast('Upload failed: Network error', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Upload & Start Stream';
+                    progressDiv.classList.add('hidden');
+                });
+                
+                xhr.open('POST', '/api/cameras/upload');
+                xhr.send(formData);
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Upload failed: ' + error.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Upload & Start Stream';
+                progressDiv.classList.add('hidden');
+            }
+        });
+
+        async function stopCamera(id) {
+            if (!confirm('Stop this camera stream?')) return;
+            try {
+                await apiCall(`/cameras/stop/${id}`, { method: 'POST' });
+                showToast('Camera stopped');
+                loadCameras();
+                loadCameraList();
+                loadCameraStatusList();
+            } catch (error) {
+                // Error already handled
+            }
+        }
+
+        async function startCamera(id) {
+            try {
+                await apiCall('/cameras/add_existing', {
+                    method: 'POST',
+                    body: JSON.stringify({ camera_id: id })
+                });
+                showToast('Camera started');
+                loadCameras();
+                loadCameraList();
+                loadCameraStatusList();
+            } catch (error) {
+                // Error already handled
+            }
+        }
+
+        async function removeCamera(id) {
+            if (!confirm('Permanently remove this camera? This cannot be undone.')) return;
+            
+            try {
+                await fetch(`/api/cameras/remove/${id}`, { method: 'DELETE' });
+                showToast('Camera removed');
+                
+                if (state.mainStreamId === id) {
+                    const remaining = state.cameras.filter(c => c.id !== id);
+                    if (remaining.length > 0) {
+                        switchMainFeed(remaining[0].id);
+                    }
+                }
+                
+                loadCameras();
+                loadCameraList();
+                loadCameraStatusList();
+            } catch (error) {
+                showToast('Failed to remove camera', 'error');
+            }
+        }
+
+        // Polling
+        function startPolling() {
+            loadCameras();
+            state.pollingInterval = setInterval(() => {
+                loadCameras();
+                if (state.isAdminAuthenticated && document.getElementById('admin-panel-modal').classList.contains('hidden') === false) {
+                    loadCameraStatusList();
+                }
+            }, 2000);
+        }
+
+        function stopPolling() {
+            if (state.pollingInterval) {
+                clearInterval(state.pollingInterval);
+                state.pollingInterval = null;
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            restorePageFromSession();
+            checkAdminAuth();
+        });
+    </script>
+</body>
+</html>
