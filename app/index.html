@@ -6,143 +6,7 @@
     <title>FallGuard - AI Fall Detection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-       	body {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #3f3f3f 100%);
-        }
-        
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .live-indicator {
-            animation: pulse-red 1.5s infinite;
-        }
-        
-        @keyframes pulse-red {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.1); }
-        }
-        
-        .fall-alert {
-            animation: flash-alert 0.5s infinite alternate;
-        }
-        
-        @keyframes flash-alert {
-            from { background-color: #dc2626; }
-            to { background-color: #991b1b; }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.8s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .video-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 12px;
-        }
-        
-        .camera-thumbnail {
-            position: relative;
-            aspect-ratio: 16/9;
-            overflow: hidden;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-        
-        .camera-thumbnail:hover {
-            transform: scale(1.05);
-            border-color: #3b82f6;
-            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
-        }
-        
-        .camera-thumbnail.active {
-            border-color: #10b981;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
-        }
-        
-        .camera-thumbnail.fall-detected {
-            border-color: #ef4444;
-            animation: pulse-red 1s infinite;
-        }
-        
-        .main-feed {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        
-        .main-feed img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .hero-section {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-
-        .hero-floating {
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-
-        .feature-card {
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body class="bg-gray-900 text-white">
     
@@ -280,6 +144,14 @@
                             <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                             <span>Lightweight and efficient system</span>
                         </li>
+                        <li class="flex items-center gap-4">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span>Privacy-first design with multiple viewing modes</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span>Comprehensive incident reporting and PDF exports</span>
+                        </li>
                     </ul>
                 </div>
 
@@ -295,6 +167,28 @@
     
     <!-- Live Feed Dashboard -->
     <div id="live-feed" class="hidden min-h-screen bg-gray-900 p-4">
+        <!-- Global Fall Alert Banner -->
+        <div id="global-fall-alert" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl">
+            <div class="fall-alert-banner bg-red-600 text-white rounded-lg shadow-2xl mx-4">
+                <div class="px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="text-3xl urgent-pulse">🚨</div>
+                        <div>
+                            <h3 class="text-xl font-bold">FALL DETECTED!</h3>
+                            <p id="global-fall-location" class="text-sm opacity-90">Checking camera...</p>
+                            <p id="global-fall-confidence" class="text-xs opacity-80"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="switchToFallCamera()" class="px-4 py-2 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition">
+                            View Camera
+                        </button>
+                        <button onclick="dismissGlobalAlert()" class="text-white hover:text-gray-200 text-2xl font-bold px-3">&times;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Header -->
         <header class="bg-gray-800 rounded-xl p-4 mb-4 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-4">
@@ -310,9 +204,9 @@
             </div>
             
             <div class="flex items-center gap-4">
-                <div class="status-badge bg-red-600 live-indicator">
-                    <span class="w-2 h-2 bg-white rounded-full"></span>
-                    <span>LIVE</span>
+                <div id="header-status-badge" class="status-badge bg-green-600">
+                    <span class="w-2 h-2 bg-white rounded-full live-indicator"></span>
+                    <span>SYSTEM NORMAL</span>
                 </div>
                 <button onclick="openAdminPanel()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,7 +226,7 @@
                     <img id="main-stream-img" 
                          src="/video_feed/main_webcam_0" 
                          alt="Main Feed"
-                         onerror="handleMainStreamError(this)"
+                         style="width: 100%; height: 100%; object-fit: contain; display: block;"
                          onload="handleMainStreamLoad(this)">
                     <div id="main-stream-error" class="hidden absolute inset-0 bg-gray-900 flex items-center justify-center flex-col">
                         <svg class="w-24 h-24 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,10 +243,14 @@
                         <span class="w-2 h-2 bg-white rounded-full live-indicator"></span>
                         <span>NORMAL</span>
                     </div>
+                    <div id="main-confidence-badge" class="status-badge bg-blue-600 hidden">
+                        <span>CONFIDENCE: <span id="main-confidence-value">0%</span></span>
+                    </div>
                 </div>
                 
                 <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
                     <h2 id="main-stream-name" class="text-2xl font-bold mb-1">Main Webcam Stream</h2>
+                    <p id="main-stream-status" class="text-gray-300">Status: Active</p>
                 </div>
                 
                 <!-- Fall Alert Banner -->
@@ -363,6 +261,7 @@
                             <div>
                                 <h3 class="text-xl font-bold">FALL DETECTED!</h3>
                                 <p id="fall-location" class="text-sm opacity-90">Camera Location</p>
+                                <p id="fall-confidence" class="text-xs opacity-80">Confidence: 0%</p>
                             </div>
                         </div>
                         <button onclick="dismissAlert()" class="text-white hover:text-gray-200 text-2xl font-bold px-3">&times;</button>
@@ -374,7 +273,7 @@
             <div class="bg-gray-800 rounded-xl p-4 overflow-y-auto shadow-xl">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold text-lg">All Cameras</h3>
-                    <button onclick="openCameraManager()" class="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition">
+                    <button onclick="openCameraManager()" class="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition" title="Add Camera">
                         <span class="text-xl">+</span>
                     </button>
                 </div>
@@ -388,6 +287,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                     </svg>
                     <p>No cameras available</p>
+                    <button onclick="openCameraManager()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition">
+                        Add Your First Camera
+                    </button>
                 </div>
             </div>
         </div>
@@ -448,6 +350,34 @@
                     </form>
                 </div>
 
+                <!-- Privacy Mode Settings -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <h3 class="text-lg font-bold mb-4">🛡️ Privacy & Data Protection</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Privacy Mode</label>
+                            <select id="privacy-mode" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="full_video">Full Video</option>
+                                <option value="skeleton_only">Skeletal Body Only</option>
+                                <option value="blurred">Blurred Person View</option>
+                                <option value="alerts_only">No Video, Only Alerts</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Great for care homes and GDPR compliance</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Pre-Fall Video Buffer (seconds)</label>
+                            <input type="number" id="pre-fall-buffer" min="1" max="30" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" value="5">
+                            <p class="text-xs text-gray-500 mt-1">Video length sent with Telegram alerts (1-30 seconds)</p>
+                        </div>
+                        
+                        <button type="button" onclick="savePrivacySettings()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition">
+                            Save Privacy Settings
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Telegram Configuration -->
                 <div class="bg-gray-900 rounded-xl p-6">
                     <div class="flex items-center justify-between mb-4">
@@ -500,6 +430,20 @@
                     
                     <div id="admin-blocked-list" class="space-y-2 max-h-96 overflow-y-auto">
                         <p class="text-gray-500 text-sm text-center py-4">No blocked users. Removed subscribers will appear here.</p>
+                    </div>
+                </div>
+
+                <!-- Incident Reports Section -->
+                <div class="bg-gray-900 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">📋 Incident Reports</h3>
+                        <button type="button" onclick="refreshIncidents()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition">
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div id="incidents-list" class="space-y-3 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-sm text-center py-4">No incidents reported yet</p>
                     </div>
                 </div>
 
@@ -626,954 +570,1537 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
-    <script>
-        // State Management
-        const state = {
-            cameras: [],
-            mainStreamId: 'main_webcam_0',
-            pollingInterval: null,
-            isAdminAuthenticated: false,
-            settings: {
-                fall_threshold: 0.70,
-                fall_delay_seconds: 2
+<script>
+    // State Management
+    const state = {
+        cameras: [],
+        mainStreamId: 'main_webcam_0',
+        pollingInterval: null,
+        alertPollingInterval: null,
+        isAdminAuthenticated: false,
+        activeFallAlerts: new Map(),
+        lastAlertCheck: 0,
+        // used to avoid unnecessary DOM updates when camera list/status hasn't changed
+        prevCamerasJson: '',
+        // when uploading, store the active XHR so it can be aborted
+        currentUploadXhr: null,
+        // Track reconnection attempts to prevent loops
+        mainStreamReconnectAttempts: 0,
+        mainStreamReconnectTimeout: null,
+        settings: {
+            fall_threshold: 0.70,
+            fall_delay_seconds: 2,
+            privacy_mode: 'full_video',
+            pre_fall_buffer_seconds: 5
+        }
+    };
+
+    // Alert Polling - FIXED VERSION
+    function startAlertPolling() {
+        checkForWebsiteAlerts();
+        state.alertPollingInterval = setInterval(checkForWebsiteAlerts, 1000);
+        console.log('[ALERT POLLING] Started');
+    }
+
+    function stopAlertPolling() {
+        if (state.alertPollingInterval) {
+            clearInterval(state.alertPollingInterval);
+            state.alertPollingInterval = null;
+            console.log('[ALERT POLLING] Stopped');
+        }
+    }
+
+    async function checkForWebsiteAlerts() {
+        try {
+            const response = await fetch('/api/alerts/active');
+            const data = await response.json();
+            
+            if (data.success && data.alerts && data.alerts.length > 0) {
+                console.log('[ALERT] Received alerts:', data.alerts);
+                
+                data.alerts.forEach(alert => {
+                    const alertKey = `${alert.camera_id}_${Math.floor(alert.timestamp / 10)}`;
+                    
+                    if (!state.activeFallAlerts.has(alertKey)) {
+                        console.log('[ALERT] Showing new alert for:', alert.camera_name);
+                        state.activeFallAlerts.set(alertKey, {
+                            cameraId: alert.camera_id,
+                            timestamp: alert.timestamp,
+                            shown: true
+                        });
+                        
+                        showGlobalFallAlert(alert.camera_name, alert.confidence, alert.camera_id);
+                        
+                        setTimeout(() => {
+                            state.activeFallAlerts.delete(alertKey);
+                        }, 30000);
+                    }
+                });
+                
+                const now = Date.now() / 1000;
+                for (const [key, value] of state.activeFallAlerts.entries()) {
+                    if (now - value.timestamp > 35) {
+                        state.activeFallAlerts.delete(key);
+                    }
+                }
             }
-        };
-
-        // Navigation
-        function goToLiveFeed() {
-            document.getElementById('landing-page').classList.add('hidden');
-            document.getElementById('live-feed').classList.remove('hidden');
-            startPolling();
+        } catch (error) {
+            console.error('[ALERT] Failed to check alerts:', error);
         }
+    }
 
-        function goToLanding() {
-            document.getElementById('live-feed').classList.add('hidden');
-            document.getElementById('landing-page').classList.remove('hidden');
-            stopPolling();
+    // Fall Alert Functions
+    function showGlobalFallAlert(cameraName, confidence, cameraId) {
+        console.log('[ALERT] Displaying alert banner for:', cameraName);
+        
+        const alertBanner = document.getElementById('global-fall-alert');
+        const locationElement = document.getElementById('global-fall-location');
+        const confidenceElement = document.getElementById('global-fall-confidence');
+        
+        locationElement.textContent = `Location: ${cameraName}`;
+        confidenceElement.textContent = `Confidence: ${(confidence * 100).toFixed(1)}%`;
+        
+        alertBanner.dataset.cameraId = cameraId;
+        alertBanner.classList.remove('hidden');
+        
+        playAlertSound();
+        flashPageTitle();
+    }
+
+    function dismissGlobalAlert() {
+        const alertBanner = document.getElementById('global-fall-alert');
+        alertBanner.classList.add('hidden');
+        console.log('[ALERT] Alert dismissed');
+    }
+
+    function switchToFallCamera() {
+        const alertBanner = document.getElementById('global-fall-alert');
+        const cameraId = alertBanner.dataset.cameraId;
+        
+        if (cameraId && state.cameras.some(cam => cam.id === cameraId)) {
+            switchMainFeed(cameraId);
+            dismissGlobalAlert();
+            showToast(`Switched to ${getCameraName(cameraId)}`);
         }
+    }
 
-        // Admin Authentication
-        async function checkAdminAuth() {
-            try {
-                const response = await fetch('/api/admin/check');
-                const data = await response.json();
-                state.isAdminAuthenticated = data.authenticated;
-                return data.authenticated;
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                return false;
+    function playAlertSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+            
+            console.log('[ALERT] Sound played');
+        } catch (error) {
+            console.log('[ALERT] Audio not supported');
+        }
+    }
+
+    function flashPageTitle() {
+        let count = 0;
+        const originalTitle = document.title;
+        const flashInterval = setInterval(() => {
+            document.title = count % 2 === 0 ? '🚨 FALL DETECTED!' : originalTitle;
+            count++;
+            if (count >= 10) {
+                document.title = originalTitle;
+                clearInterval(flashInterval);
             }
-        }
+        }, 500);
+    }
 
-        function openAdminLogin() {
-            document.getElementById('admin-login-modal').classList.remove('hidden');
-            document.getElementById('admin-password').value = '';
-            document.getElementById('admin-password').focus();
-        }
+    function getCameraName(cameraId) {
+        const camera = state.cameras.find(cam => cam.id === cameraId);
+        return camera ? camera.name : 'Unknown Camera';
+    }
 
-        function openAdminLoginFromNav() {
-            openAdminLogin();
-        }
-
-        // Page Navigation with Session Persistence
-        function getCurrentPage() {
-            return sessionStorage.getItem('currentPage') || 'landing';
-        }
-
-        function setCurrentPage(page) {
-            sessionStorage.setItem('currentPage', page);
-        }
-
-        function goToHomepage() {
-            setCurrentPage('landing');
-            document.getElementById('landing-page').classList.remove('hidden');
-            document.getElementById('learn-more-page').classList.add('hidden');
-            document.getElementById('live-feed').classList.add('hidden');
-            document.getElementById('admin-login-modal').classList.add('hidden');
-            document.getElementById('admin-panel-modal').classList.add('hidden');
-        }
-
-        function goToLearnMore() {
-            setCurrentPage('learn-more');
-            document.getElementById('landing-page').classList.add('hidden');
-            document.getElementById('learn-more-page').classList.remove('hidden');
-            document.getElementById('live-feed').classList.add('hidden');
-            document.getElementById('admin-login-modal').classList.add('hidden');
-            document.getElementById('admin-panel-modal').classList.add('hidden');
-        }
-
-        function goToLiveFeed() {
-            setCurrentPage('live-feed');
-            document.getElementById('landing-page').classList.add('hidden');
-            document.getElementById('learn-more-page').classList.add('hidden');
-            document.getElementById('live-feed').classList.remove('hidden');
-        }
-
-        function restorePageFromSession() {
-            const currentPage = getCurrentPage();
-            if (currentPage === 'learn-more') {
-                goToLearnMore();
-            } else if (currentPage === 'live-feed') {
-                goToLiveFeed();
+    // Camera Management
+    async function loadCameras() {
+        try {
+            const data = await apiCall('/cameras');
+            const previousCameras = [...state.cameras];
+            state.cameras = data.cameras;
+            
+            console.log('[CAMERAS] Loaded cameras:', state.cameras.length);
+            
+            // CRITICAL FIX: Don't auto-select a different camera
+            // Only auto-select if we have no camera selected yet AND cameras exist
+            if (state.mainStreamId === 'main_webcam_0' || !state.cameras.find(c => c.id === state.mainStreamId)) {
+                if (state.cameras.length > 0) {
+                    // Try to find the main_webcam_0, otherwise use first camera
+                    const mainCamera = state.cameras.find(c => c.id === 'main_webcam_0');
+                    if (mainCamera) {
+                        console.log('[CAMERAS] Found main_webcam_0, keeping it');
+                        state.mainStreamId = mainCamera.id;
+                    } else {
+                        const firstCamera = state.cameras[0];
+                        console.log('[CAMERAS] main_webcam_0 not found, using first camera:', firstCamera.name);
+                        state.mainStreamId = firstCamera.id;
+                    }
+                }
             } else {
-                goToHomepage();
+                console.log('[CAMERAS] Preserving current camera selection:', state.mainStreamId);
+            }
+            
+            const cameraIdsChanged = 
+                previousCameras.length !== state.cameras.length ||
+                !previousCameras.every((cam, i) => cam.id === state.cameras[i]?.id);
+            // Serialize a small subset of camera fields to determine if a re-render is necessary
+            const newJson = JSON.stringify(state.cameras.map(c => ({
+                id: c.id,
+                color: c.color,
+                isLive: c.isLive,
+                confidence_score: c.confidence_score,
+                status: c.status
+            })));
+
+            // If camera IDs changed or the small serialized state changed, re-render grid and main feed
+            if (cameraIdsChanged || state.prevCamerasJson !== newJson) {
+                console.log('[CAMERAS] Camera list or state changed, refreshing UI');
+                renderCameraGrid();
+                updateMainFeed();
+                state.prevCamerasJson = newJson;
+            } else {
+                // No visual change, but keep system status updated
+                console.log('[CAMERAS] No changes detected, skipping full render');
+                updateSystemStatus();
+            }
+        } catch (error) {
+            console.error('[CAMERAS] Failed to load cameras:', error);
+        }
+    }
+
+    // Cache grid click handler to avoid adding multiple listeners
+    let gridClickHandlerAttached = false;
+    
+    function renderCameraGrid() {
+        const grid = document.getElementById('camera-grid');
+        const noMsg = document.getElementById('no-cameras');
+        
+        if (!state.cameras || state.cameras.length === 0) {
+            console.log('[GRID] No cameras to display');
+            grid.classList.add('hidden');
+            noMsg.classList.remove('hidden');
+            return;
+        }
+        
+        console.log('[GRID] Rendering', state.cameras.length, 'cameras');
+        grid.classList.remove('hidden');
+        noMsg.classList.add('hidden');
+        
+        grid.innerHTML = state.cameras.map(cam => {
+            const isActive = cam.id === state.mainStreamId;
+            const isFall = cam.color === 'red';
+            const isLive = cam.isLive;
+            
+            console.log(`[GRID] ${cam.name}: id='${cam.id}', live=${isLive}, status=${cam.status}, color=${cam.color}`);
+            
+            const thumbnailId = `thumb_${cam.id}`;
+            const cameraIdStr = String(cam.id).trim();
+            // Use MJPEG stream endpoint for continuous video
+            const feedUrl = `/video_feed/${cameraIdStr}`;
+            
+            console.log(`[GRID-DEBUG] URL for ${cam.name}: ${feedUrl}`);
+            
+            return `
+            <div class="camera-thumbnail ${isActive ? 'active' : ''} ${isFall ? 'fall-detected' : ''}" 
+                 data-camera-id="${cameraIdStr}"
+                 style="position: relative; overflow: hidden; background: #000; cursor: pointer;">
+                ${isLive ? `
+                    <img id="${thumbnailId}" 
+                         src="${feedUrl}" 
+                         class="w-full h-full object-cover" 
+                         alt="${cam.name}"
+                         style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                         onload="handleThumbnailLoad(this, '${cameraIdStr}')"
+                         onerror="handleThumbnailError(this, '${cameraIdStr}')">
+                    <div class="thumbnail-error hidden absolute inset-0 bg-gray-900 flex items-center justify-center" style="z-index: 10;">
+                        <div class="text-center">
+                            <p class="text-gray-400">Stream Loading...</p>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400">
+                        <p>📷 Camera Offline</p>
+                    </div>
+                `}
+            </div>`;
+        }).join('');
+        
+        // Only attach listener ONCE to avoid memory leaks and duplicate listeners
+        if (!gridClickHandlerAttached) {
+            grid.addEventListener('click', handleGridClick, false);
+            gridClickHandlerAttached = true;
+            console.log('[GRID] Click handler attached');
+        }
+    }
+    
+    function handleGridClick(event) {
+        let target = event.target;
+        const grid = document.getElementById('camera-grid');
+        // Traverse up to find the camera thumbnail element
+        while (target && target !== grid && !target.hasAttribute('data-camera-id')) {
+            target = target.parentElement;
+        }
+        if (target && target.hasAttribute('data-camera-id')) {
+            event.stopPropagation();
+            const camId = target.getAttribute('data-camera-id');
+            console.log(`[GRID] Thumbnail clicked for camera: '${camId}'`);
+            if (camId && camId.trim()) {
+                switchMainFeed(camId.trim());
             }
         }
+    }
 
-        function closeAdminLogin() {
-            document.getElementById('admin-login-modal').classList.add('hidden');
+    function handleThumbnailError(img, cameraId) {
+        console.log(`[GRID] Thumbnail stream error for ${cameraId}, attempting recovery`);
+        const container = img.parentElement;
+        const errorDiv = container.querySelector('.thumbnail-error');
+        if (errorDiv) {
+            errorDiv.classList.remove('hidden');
         }
+        
+        // Show stream status
+        const camera = state.cameras.find(c => String(c.id).trim() === String(cameraId).trim());
+        if (camera && errorDiv) {
+            const statusText = errorDiv.querySelector('p');
+            if (statusText && camera.status) {
+                statusText.textContent = `Status: ${camera.status}`;
+            }
+        }
+        
+        // Recover stream by reconnecting
+        setTimeout(() => {
+            if (img && camera && camera.isLive) {
+                console.log(`[GRID] Recovering thumbnail stream for ${cameraId}`);
+                // Force reconnection with fresh URL
+                const newUrl = `/video_feed/${cameraId}?t=${Date.now()}`;
+                img.src = '';
+                setTimeout(() => {
+                    img.src = newUrl;
+                    console.log(`[GRID] Thumbnail stream reconnected: ${cameraId}`);
+                }, 100);
+            }
+        }, 2000);
+    }
 
-        async function openAdminPanel() {
-            const isAuth = await checkAdminAuth();
-            if (isAuth) {
-                document.getElementById('admin-panel-modal').classList.remove('hidden');
-                loadSettings();
-                loadTelegramStatus();
-                loadAdminSubscribersList();
-                loadAdminBlockedList();
+    function handleThumbnailLoad(img, cameraId) {
+        console.log(`[GRID] Thumbnail loaded for ${cameraId}`);
+        const container = img.parentElement;
+        const errorDiv = container.querySelector('.thumbnail-error');
+        if (errorDiv) {
+            errorDiv.classList.add('hidden');
+        }
+    }
+
+    function switchMainFeed(cameraId) {
+        console.log('[SWITCH] Called with cameraId:', cameraId);
+        
+        if (!cameraId) {
+            console.error(`[SWITCH] Invalid camera ID`);
+            return;
+        }
+        
+        // Normalize: trim, convert to string
+        const normalizedId = String(cameraId).trim();
+        
+        // Verify camera exists
+        const camera = state.cameras.find(c => String(c.id).trim() === normalizedId);
+        if (!camera) {
+            console.error(`[SWITCH] Camera not found: '${normalizedId}'`);
+            showToast('Camera not found or is offline', 'error');
+            return;
+        }
+        
+        // Check if already on this camera
+        if (state.mainStreamId === normalizedId) {
+            console.log(`[SWITCH] Already on camera ${camera.name}`);
+            return;
+        }
+        
+        // Double-check camera is live
+        if (!camera.isLive) {
+            console.warn(`[SWITCH] Camera is not live: ${camera.name}`);
+            showToast(`Camera "${camera.name}" is currently offline`, 'warning');
+            return;
+        }
+        
+        console.log(`[SWITCH] Switching to ${camera.name}`);
+        state.mainStreamId = normalizedId;
+        
+        const img = document.getElementById('main-stream-img');
+        
+        if (!img) {
+            console.error('[SWITCH] main-stream-img not found');
+            return;
+        }
+        
+        // Set the new stream URL - no clearing, let MJPEG handle it smoothly
+        const feedUrl = `/video_feed/${normalizedId}`;
+        console.log(`[SWITCH] Setting URL: ${feedUrl}`);
+        img.src = feedUrl;
+        
+        // Update UI
+        renderCameraGrid();
+        updateMainFeed();
+        showToast(`Switched to ${camera.name}`, 'success');
+        
+        console.log(`[SWITCH] ✓ Done`);
+    }
+
+    function handleMainStreamError(img) {
+        console.warn('[STREAM] Stream connection event');
+    }
+
+    function handleMainStreamLoad(img) {
+        console.log('[STREAM] Stream loaded');
+        state.mainStreamReconnectAttempts = 0;
+    }
+
+    function handleMainFeedClick() {
+        // Allow clicking on the main feed to show camera grid (hint to user they can select another camera)
+        console.log('[CLICK] Main feed clicked. Current camera:', state.mainStreamId);
+        showToast('Click on a camera thumbnail to switch feeds', 'info');
+    }
+
+    function updateMainFeed() {
+        const camera = state.cameras.find(c => c.id === state.mainStreamId);
+        if (!camera) {
+            console.error(`[UPDATE] Camera not found for ID: ${state.mainStreamId}`);
+            console.error(`[UPDATE] Available cameras:`, state.cameras.map(c => ({id: c.id, name: c.name})));
+            return;
+        }
+        
+        console.log(`[UPDATE] Updating main feed for: ${camera.name} (${camera.id})`);
+        
+        const badge = document.getElementById('main-status-badge');
+        const confidenceBadge = document.getElementById('main-confidence-badge');
+        const confidenceValue = document.getElementById('main-confidence-value');
+        const name = document.getElementById('main-stream-name');
+        const status = document.getElementById('main-stream-status');
+        const alert = document.getElementById('fall-alert-overlay');
+        const fallLocation = document.getElementById('fall-location');
+        const fallConfidence = document.getElementById('fall-confidence');
+        
+        if (!badge || !name || !status) {
+            console.error('[UPDATE] Required elements not found in DOM');
+            return;
+        }
+        
+        name.textContent = camera.name;
+        status.textContent = `Status: ${camera.status}`;
+        
+        if (camera.color === 'red') {
+            badge.className = 'status-badge bg-red-600 fall-alert';
+            badge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>FALL DETECTED</span>';
+            
+            confidenceBadge.classList.remove('hidden');
+            confidenceValue.textContent = `${(camera.confidence_score * 100).toFixed(1)}%`;
+            
+            alert.classList.remove('hidden');
+            fallLocation.textContent = camera.name;
+            fallConfidence.textContent = `Confidence: ${(camera.confidence_score * 100).toFixed(1)}%`;
+        } else {
+            badge.className = 'status-badge bg-green-600';
+            badge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>NORMAL</span>';
+            
+            if (camera.confidence_score > 0.3) {
+                confidenceBadge.classList.remove('hidden');
+                confidenceValue.textContent = `${(camera.confidence_score * 100).toFixed(1)}%`;
+            } else {
+                confidenceBadge.classList.add('hidden');
+            }
+            
+            alert.classList.add('hidden');
+        }
+        
+        console.log(`[UPDATE] Feed updated: ${camera.name}, status=${camera.status}, color=${camera.color}`);
+    }
+
+    function updateSystemStatus() {
+        const activeCameras = state.cameras.filter(cam => cam.isLive).length;
+        const fallDetections = state.cameras.filter(cam => cam.color === 'red').length;
+        
+        console.log(`[STATUS] Active: ${activeCameras}, Falls: ${fallDetections}`);
+        
+        const headerBadge = document.getElementById('header-status-badge');
+        if (fallDetections > 0) {
+            headerBadge.className = 'status-badge bg-red-600 fall-alert';
+            headerBadge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>⚠️ FALL DETECTED</span>';
+        } else if (activeCameras > 0) {
+            headerBadge.className = 'status-badge bg-green-600';
+            headerBadge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>SYSTEM NORMAL</span>';
+        } else {
+            headerBadge.className = 'status-badge bg-gray-600';
+            headerBadge.innerHTML = '<span class="w-2 h-2 bg-gray rounded-full"></span><span>NO CAMERAS</span>';
+        }
+    }
+
+    function dismissAlert() {
+        document.getElementById('fall-alert-overlay').classList.add('hidden');
+    }
+
+    // Polling System
+    function startPolling() {
+        console.log('[POLLING] Starting camera and alert polling');
+        loadCameras();
+        startAlertPolling();
+        
+        state.pollingInterval = setInterval(() => {
+            loadCameras();
+            if (state.isAdminAuthenticated && !document.getElementById('admin-panel-modal').classList.contains('hidden')) {
                 loadCameraStatusList();
+            }
+        }, 2500); // Reduced from 1000ms to 2500ms for better performance
+    }
+
+    function stopPolling() {
+        console.log('[POLLING] Stopping polling');
+        if (state.pollingInterval) {
+            clearInterval(state.pollingInterval);
+            state.pollingInterval = null;
+        }
+        stopAlertPolling();
+    }
+
+    // Navigation
+    function goToLiveFeed() {
+        console.log('[NAV] Going to live feed');
+        setCurrentPage('live-feed');
+        document.getElementById('landing-page').classList.add('hidden');
+        document.getElementById('learn-more-page').classList.add('hidden');
+        document.getElementById('live-feed').classList.remove('hidden');
+        startPolling();
+    }
+
+    function goToHomepage() {
+        console.log('[NAV] Going to homepage');
+        setCurrentPage('landing');
+        document.getElementById('landing-page').classList.remove('hidden');
+        document.getElementById('learn-more-page').classList.add('hidden');
+        document.getElementById('live-feed').classList.add('hidden');
+        stopPolling();
+    }
+
+    function goToLearnMore() {
+        console.log('[NAV] Going to learn more');
+        setCurrentPage('learn-more');
+        document.getElementById('landing-page').classList.add('hidden');
+        document.getElementById('learn-more-page').classList.remove('hidden');
+        document.getElementById('live-feed').classList.add('hidden');
+        stopPolling();
+    }
+
+    // Page State Persistence
+    function getCurrentPage() {
+        return sessionStorage.getItem('currentPage') || 'landing';
+    }
+
+    function setCurrentPage(page) {
+        sessionStorage.setItem('currentPage', page);
+    }
+
+    function restorePageFromSession() {
+        const currentPage = getCurrentPage();
+        console.log('[INIT] Restoring page:', currentPage);
+        
+        if (currentPage === 'learn-more') {
+            goToLearnMore();
+        } else if (currentPage === 'live-feed') {
+            goToLiveFeed();
+        } else {
+            goToHomepage();
+        }
+    }
+
+    // Admin Authentication
+    async function checkAdminAuth() {
+        try {
+            const response = await fetch('/api/admin/check');
+            const data = await response.json();
+            state.isAdminAuthenticated = data.authenticated;
+            return data.authenticated;
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            return false;
+        }
+    }
+
+    function openAdminLogin() {
+        document.getElementById('admin-login-modal').classList.remove('hidden');
+        document.getElementById('admin-password').value = '';
+        document.getElementById('admin-password').focus();
+    }
+
+    function closeAdminLogin() {
+        document.getElementById('admin-login-modal').classList.add('hidden');
+    }
+
+    let adminPanelLoading = false;
+    
+    async function openAdminPanel() {
+        // Prevent multiple concurrent load attempts
+        if (adminPanelLoading) return;
+        adminPanelLoading = true;
+        
+        try {
+            const isAuth = await checkAdminAuth();
+            
+            // Always open the modal first
+            const modal = document.getElementById('admin-panel-modal');
+            
+            if (isAuth) {
+                modal.classList.remove('hidden');
+                // Load all data after modal is visible
+                await Promise.all([
+                    loadSettings().catch(err => console.error('Failed to load settings:', err)),
+                    loadTelegramStatus().catch(err => console.error('Failed to load telegram:', err)),
+                    loadAdminSubscribersList().catch(err => console.error('Failed to load subscribers:', err)),
+                    loadAdminBlockedList().catch(err => console.error('Failed to load blocked:', err)),
+                    loadCameraStatusList().catch(err => console.error('Failed to load cameras:', err)),
+                    loadPrivacySettings().catch(err => console.error('Failed to load privacy:', err)),
+                    loadIncidents().catch(err => console.error('Failed to load incidents:', err))
+                ]);
             } else {
                 openAdminLogin();
             }
+        } finally {
+            adminPanelLoading = false;
         }
+    }
 
-        function closeAdminPanel() {
-            document.getElementById('admin-panel-modal').classList.add('hidden');
+    function closeAdminPanel() {
+        document.getElementById('admin-panel-modal').classList.add('hidden');
+    }
+
+    async function logoutAdmin() {
+        try {
+            await fetch('/api/admin/logout', { method: 'POST' });
+            state.isAdminAuthenticated = false;
+            closeAdminPanel();
+            showToast('Logged out successfully', 'info');
+        } catch (error) {
+            showToast('Logout failed', 'error');
         }
+    }
 
-        async function logoutAdmin() {
-            try {
-                await fetch('/api/admin/logout', { method: 'POST' });
-                state.isAdminAuthenticated = false;
-                closeAdminPanel();
-                showToast('Logged out successfully', 'info');
-            } catch (error) {
-                showToast('Logout failed', 'error');
-            }
-        }
-
-        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const password = document.getElementById('admin-password').value;
+    // Admin Login Form
+    document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const password = document.getElementById('admin-password').value;
+        
+        try {
+            const response = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ password })
+            });
             
-            try {
-                const response = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    state.isAdminAuthenticated = true;
-                    closeAdminLogin();
-                    openAdminPanel();
-                    showToast('Login successful', 'success');
-                } else {
-                    showToast('Invalid password', 'error');
-                    document.getElementById('admin-password').value = '';
-                    document.getElementById('admin-password').focus();
-                }
-            } catch (error) {
-                showToast('Login failed', 'error');
-            }
-        });
-
-        // Camera Manager
-        function openCameraManager() {
-            document.getElementById('camera-manager-modal').classList.remove('hidden');
-            loadCameraList();
-        }
-
-        function closeCameraManager() {
-            document.getElementById('camera-manager-modal').classList.add('hidden');
-        }
-
-        async function loadCameraList() {
-            try {
-                const data = await apiCall('/cameras/all_definitions');
-                const list = document.getElementById('camera-list');
-                
-                if (data.definitions.length === 0) {
-                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No cameras configured</p>';
-                    return;
-                }
-                
-                list.innerHTML = data.definitions.map(cam => `
-                    <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
-                        <div class="flex-1">
-                            <p class="font-semibold">${cam.name}</p>
-                            <p class="text-xs text-gray-500">Source: ${cam.source}</p>
-                            <p class="text-xs ${cam.isLive ? 'text-green-500' : 'text-gray-500'}">
-                                ${cam.isLive ? '● Live' : '○ Stopped'}
-                            </p>
-                        </div>
-                        <div class="flex gap-2">
-                            ${cam.isLive ? 
-                                `<button onclick="stopCamera('${cam.id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition">Stop</button>` :
-                                `<button onclick="startCamera('${cam.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition">Start</button>`
-                            }
-                            <button onclick="removeCamera('${cam.id}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm font-medium transition">Remove</button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('Failed to load camera list:', error);
-            }
-        }
-
-        async function loadCameraStatusList() {
-            try {
-                const data = await apiCall('/cameras/all_definitions');
-                const container = document.getElementById('camera-status-list');
-                
-                if (data.definitions.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No cameras configured</p>';
-                    return;
-                }
-                
-                container.innerHTML = data.definitions.map(cam => {
-                    const statusColor = cam.isLive ? 
-                        (cam.status === 'FALL DETECTED' ? 'text-red-500' : 'text-green-500') : 
-                        'text-gray-500';
-                    
-                    return `
-                        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="font-bold text-lg">${cam.name}</h4>
-                                <span class="status-badge ${cam.isLive ? (cam.status === 'FALL DETECTED' ? 'bg-red-600' : 'bg-green-600') : 'bg-gray-600'}">
-                                    ${cam.isLive ? '● LIVE' : '○ OFFLINE'}
-                                </span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                    <p class="text-gray-400">Status</p>
-                                    <p class="${statusColor} font-semibold">${cam.status || 'Offline'}</p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-400">FPS</p>
-                                    <p class="text-white font-semibold">${cam.fps ? cam.fps.toFixed(1) : '0.0'}</p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-400">Confidence</p>
-                                    <p class="text-white font-semibold">${cam.confidence_score ? (cam.confidence_score * 100).toFixed(1) + '%' : '0.0%'}</p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-400">Source</p>
-                                    <p class="text-white font-semibold truncate">${cam.source}</p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (error) {
-                console.error('Failed to load camera status:', error);
-            }
-        }
-
-        function switchTab(tab) {
-            const webcamBtn = document.getElementById('tab-webcam');
-            const uploadBtn = document.getElementById('tab-upload');
-            const webcamForm = document.getElementById('add-camera-form');
-            const uploadForm = document.getElementById('upload-form');
-
-            if (tab === 'webcam') {
-                webcamBtn.classList.add('bg-blue-600');
-                webcamBtn.classList.remove('bg-gray-700');
-                uploadBtn.classList.remove('bg-blue-600');
-                uploadBtn.classList.add('bg-gray-700');
-                webcamForm.classList.remove('hidden');
-                uploadForm.classList.add('hidden');
+            const data = await response.json();
+            
+            if (data.success) {
+                state.isAdminAuthenticated = true;
+                closeAdminLogin();
+                openAdminPanel();
+                showToast('Login successful', 'success');
             } else {
-                uploadBtn.classList.add('bg-blue-600');
-                uploadBtn.classList.remove('bg-gray-700');
-                webcamBtn.classList.remove('bg-blue-600');
-                webcamBtn.classList.add('bg-gray-700');
-                uploadForm.classList.remove('hidden');
-                webcamForm.classList.add('hidden');
+                showToast('Invalid password', 'error');
+                document.getElementById('admin-password').value = '';
+                document.getElementById('admin-password').focus();
             }
+        } catch (error) {
+            showToast('Login failed', 'error');
         }
+    });
 
-        // Telegram Functions
-        async function loadTelegramStatus() {
-            try {
-                const data = await apiCall('/settings');
-                const statusDiv = document.getElementById('telegram-status');
-                const testBtn = document.getElementById('test-alert-btn');
-                const tokenInput = document.getElementById('telegram-token');
-                
-                if (data.telegram_token) {
-                    statusDiv.classList.remove('hidden');
-                    const botName = data.telegram_bot_name || 'Bot';
-                    document.getElementById('telegram-status-text').textContent = `✅ Connected: ${botName}`;
-                    testBtn.disabled = false;
-                    tokenInput.placeholder = '(Token already configured)';
-                } else {
-                    statusDiv.classList.add('hidden');
-                    testBtn.disabled = true;
-                }
-            } catch (error) {
-                console.error('Failed to load telegram status:', error);
-            }
+    // Settings Management
+    async function loadSettings() {
+        try {
+            const data = await apiCall('/settings');
+            state.settings = data.settings;
+            document.getElementById('fall-threshold').value = data.settings.fall_threshold;
+            document.getElementById('fall-delay').value = data.settings.fall_delay_seconds;
+        } catch (error) {
+            console.error('Failed to load settings:', error);
         }
+    }
 
-        async function saveTelegramToken() {
-            const token = document.getElementById('telegram-token').value.trim();
-            
-            if (!token) {
-                showToast('Please enter a bot token', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await apiCall('/telegram/set_token', {
-                    method: 'POST',
-                    body: JSON.stringify({ token })
-                });
-                
-                if (response.success) {
-                    showToast('Bot token saved successfully!', 'success');
-                    document.getElementById('telegram-token').value = '';
-                    await loadTelegramStatus();
-                } else {
-                    showToast(response.message || 'Failed to save token', 'error');
-                }
-            } catch (error) {
-                showToast('Invalid token or connection failed', 'error');
-            }
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            await apiCall('/settings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fall_threshold: parseFloat(document.getElementById('fall-threshold').value),
+                    fall_delay_seconds: parseInt(document.getElementById('fall-delay').value)
+                })
+            });
+            showToast('Settings saved successfully');
+            loadCameraStatusList();
+        } catch (error) {
+            // Error already handled by apiCall
         }
+    });
 
-        async function testTelegramAlert() {
+    // Privacy Mode Functions
+    async function loadPrivacySettings() {
+        try {
+            const data = await apiCall('/settings');
+            document.getElementById('privacy-mode').value = data.settings.privacy_mode || 'full_video';
+            document.getElementById('pre-fall-buffer').value = data.settings.pre_fall_buffer_seconds || 5;
+        } catch (error) {
+            console.error('Failed to load privacy settings:', error);
+        }
+    }
+
+    async function savePrivacySettings() {
+        try {
+            await apiCall('/settings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    privacy_mode: document.getElementById('privacy-mode').value,
+                    pre_fall_buffer_seconds: parseInt(document.getElementById('pre-fall-buffer').value)
+                })
+            });
+            showToast('Privacy settings saved successfully');
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+
+    // Telegram Functions
+    async function loadTelegramStatus() {
+        try {
+            const data = await apiCall('/settings');
+            const statusDiv = document.getElementById('telegram-status');
             const testBtn = document.getElementById('test-alert-btn');
-            testBtn.disabled = true;
-            testBtn.innerHTML = '⏳ Sending...';
+            const tokenInput = document.getElementById('telegram-token');
             
-            try {
-                const response = await apiCall('/telegram/test_alert', {
-                    method: 'POST'
-                });
-                
-                if (response.success) {
-                    showToast(`Test alert sent to ${response.sent_count} subscriber(s)`, 'success');
-                } else {
-                    showToast(response.message || 'Failed to send test alert', 'error');
-                }
-            } catch (error) {
-                showToast('No subscribers configured', 'warning');
-            } finally {
+            if (data.telegram_token) {
+                statusDiv.classList.remove('hidden');
+                const botName = data.telegram_bot_name || 'Bot';
+                document.getElementById('telegram-status-text').textContent = `✅ Connected: ${botName}`;
                 testBtn.disabled = false;
-                testBtn.innerHTML = 'Test Alert';
+                tokenInput.placeholder = '(Token already configured)';
+            } else {
+                statusDiv.classList.add('hidden');
+                testBtn.disabled = true;
             }
+        } catch (error) {
+            console.error('Failed to load telegram status:', error);
         }
+    }
 
-        function openTelegramSubscribers() {
-            document.getElementById('telegram-subscribers-modal').classList.remove('hidden');
-            loadTelegramSubscribers();
+    async function saveTelegramToken() {
+        const token = document.getElementById('telegram-token').value.trim();
+        
+        if (!token) {
+            showToast('Please enter a bot token', 'warning');
+            return;
         }
-
-        function closeTelegramSubscribers() {
-            document.getElementById('telegram-subscribers-modal').classList.add('hidden');
-        }
-
-        async function loadTelegramSubscribers() {
-            try {
-                const response = await apiCall('/telegram/subscribers');
-                const list = document.getElementById('subscribers-list');
-                
-                if (!response.subscribers || response.subscribers.length === 0) {
-                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Ask users to send /start to your bot!</p>';
-                    return;
-                }
-                
-                list.innerHTML = response.subscribers.map(sub => `
-                    <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between">
-                        <div class="flex-1">
-                            <p class="font-medium">${escapeHtml(sub.name || 'Unknown')}</p>
-                            <p class="text-xs text-gray-400">ID: ${sub.chat_id}</p>
-                            ${sub.username ? `<p class="text-xs text-gray-400">@${escapeHtml(sub.username)}</p>` : ''}
-                        </div>
-                        <button type="button" onclick="removeSubscriber('${sub.chat_id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition">
-                            Remove
-                        </button>
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('Failed to load subscribers:', error);
-                document.getElementById('subscribers-list').innerHTML = '<p class="text-red-400 text-sm">Failed to load subscribers</p>';
-            }
-        }
-
-        async function loadAdminSubscribersList() {
-            try {
-                const response = await apiCall('/telegram/subscribers');
-                const list = document.getElementById('admin-subscribers-list');
-                const count = document.getElementById('subscriber-count');
-                
-                if (!response.subscribers || response.subscribers.length === 0) {
-                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Users can send /start to your bot!</p>';
-                    count.textContent = '0';
-                    return;
-                }
-                
-                count.textContent = response.subscribers.length;
-                
-                list.innerHTML = response.subscribers.map(sub => `
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="font-semibold text-white">${escapeHtml(sub.name || 'Unknown')}</p>
-                            <div class="flex gap-2">
-                                <span class="text-xs bg-green-600 text-white px-2 py-1 rounded">✅ Active</span>
-                                <button type="button" onclick="removeSubscriberAdmin('${sub.chat_id}', '${escapeHtml(sub.name || 'Unknown')}')" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition">
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-400">Chat ID: <code class="bg-gray-900 px-1 py-0.5 rounded">${sub.chat_id}</code></p>
-                        ${sub.username ? `<p class="text-xs text-gray-400">Telegram: <code class="bg-gray-900 px-1 py-0.5 rounded">@${escapeHtml(sub.username)}</code></p>` : ''}
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('Failed to load admin subscribers:', error);
-            }
-        }
-
-        async function addManualSubscriber() {
-            const chatId = document.getElementById('manual-chat-id').value.trim();
-            const name = document.getElementById('manual-name').value.trim();
+        
+        try {
+            const response = await apiCall('/telegram/set_token', {
+                method: 'POST',
+                body: JSON.stringify({ token })
+            });
             
-            if (!chatId) {
-                showToast('Please enter a Chat ID', 'warning');
+            if (response.success) {
+                showToast('Bot token saved successfully!', 'success');
+                document.getElementById('telegram-token').value = '';
+                await loadTelegramStatus();
+            } else {
+                showToast(response.message || 'Failed to save token', 'error');
+            }
+        } catch (error) {
+            showToast('Invalid token or connection failed', 'error');
+        }
+    }
+
+    async function testTelegramAlert() {
+        const testBtn = document.getElementById('test-alert-btn');
+        testBtn.disabled = true;
+        testBtn.innerHTML = '⏳ Sending...';
+        
+        try {
+            const response = await apiCall('/telegram/test_alert', {
+                method: 'POST'
+            });
+            
+            if (response.success) {
+                showToast(`Test alert sent to ${response.sent_count} subscriber(s)`, 'success');
+            } else {
+                showToast(response.message || 'Failed to send test alert', 'error');
+            }
+        } catch (error) {
+            showToast('No subscribers configured', 'warning');
+        } finally {
+            testBtn.disabled = false;
+            testBtn.innerHTML = 'Test Alert';
+        }
+    }
+
+    function openTelegramSubscribers() {
+        document.getElementById('telegram-subscribers-modal').classList.remove('hidden');
+        loadTelegramSubscribers();
+    }
+
+    function closeTelegramSubscribers() {
+        document.getElementById('telegram-subscribers-modal').classList.add('hidden');
+    }
+
+    async function loadTelegramSubscribers() {
+        try {
+            const response = await apiCall('/telegram/subscribers');
+            const list = document.getElementById('subscribers-list');
+            
+            if (!response.subscribers || response.subscribers.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Ask users to send /start to your bot!</p>';
                 return;
             }
             
-            if (!/^\d+$/.test(chatId)) {
-                showToast('Chat ID must contain only numbers', 'error');
+            list.innerHTML = response.subscribers.map(sub => `
+                <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between">
+                    <div class="flex-1">
+                        <p class="font-medium">${escapeHtml(sub.name || 'Unknown')}</p>
+                        <p class="text-xs text-gray-400">ID: ${sub.chat_id}</p>
+                        ${sub.username ? `<p class="text-xs text-gray-400">@${escapeHtml(sub.username)}</p>` : ''}
+                    </div>
+                    <button type="button" onclick="removeSubscriber('${sub.chat_id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load subscribers:', error);
+            document.getElementById('subscribers-list').innerHTML = '<p class="text-red-400 text-sm">Failed to load subscribers</p>';
+        }
+    }
+
+    async function loadAdminSubscribersList() {
+        try {
+            const response = await apiCall('/telegram/subscribers');
+            const list = document.getElementById('admin-subscribers-list');
+            const count = document.getElementById('subscriber-count');
+            
+            if (!response.subscribers || response.subscribers.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No subscribers yet. Users can send /start to your bot!</p>';
+                count.textContent = '0';
                 return;
             }
             
-            try {
-                const response = await apiCall('/telegram/add_subscriber', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        chat_id: chatId,
-                        name: name || 'Manual Entry'
-                    })
-                });
-                
-                if (response.success) {
-                    showToast('Subscriber added successfully!', 'success');
-                    document.getElementById('manual-chat-id').value = '';
-                    document.getElementById('manual-name').value = '';
-                    await loadTelegramSubscribers();
-                    await loadAdminSubscribersList();
-                } else {
-                    showToast(response.message || 'Failed to add subscriber', 'error');
-                }
-            } catch (error) {
-                showToast('Error adding subscriber', 'error');
-            }
-        }
-
-        async function removeSubscriber(chatId) {
-            if (!confirm('Remove this subscriber?')) return;
+            count.textContent = response.subscribers.length;
             
-            try {
-                const response = await apiCall('/telegram/remove_subscriber', {
-                    method: 'POST',
-                    body: JSON.stringify({ chat_id: chatId })
-                });
-                
-                if (response.success) {
-                    showToast('Subscriber removed', 'success');
-                    await loadTelegramSubscribers();
-                    await loadAdminSubscribersList();
-                } else {
-                    showToast('Failed to remove subscriber', 'error');
-                }
-            } catch (error) {
-                showToast('Error removing subscriber', 'error');
-            }
-        }
-
-        async function removeSubscriberAdmin(chatId, name) {
-            if (!confirm(`Remove subscriber "${name}" (Chat ID: ${chatId})?`)) return;
-            
-            try {
-                const response = await apiCall('/telegram/remove_subscriber', {
-                    method: 'POST',
-                    body: JSON.stringify({ chat_id: chatId })
-                });
-                
-                if (response.success) {
-                    showToast('Subscriber removed', 'success');
-                    await loadTelegramSubscribers();
-                    await loadAdminSubscribersList();
-                    await loadAdminBlockedList();
-                } else {
-                    showToast('Failed to remove subscriber', 'error');
-                }
-            } catch (error) {
-                showToast('Error removing subscriber', 'error');
-            }
-        }
-
-        async function loadAdminBlockedList() {
-            try {
-                const response = await apiCall('/telegram/blocked');
-                const list = document.getElementById('admin-blocked-list');
-                const count = document.getElementById('blocked-count');
-                
-                if (!response.blocked || response.blocked.length === 0) {
-                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No blocked users. Removed subscribers will appear here.</p>';
-                    count.textContent = '0';
-                    return;
-                }
-                
-                count.textContent = response.blocked.length;
-                
-                list.innerHTML = response.blocked.map(chatId => `
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-red-500 transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="font-semibold text-white">Chat ID: ${chatId}</p>
-                            <button type="button" onclick="unblockUser('${chatId}')" class="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition">
-                                Unblock
+            list.innerHTML = response.subscribers.map(sub => `
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="font-semibold text-white">${escapeHtml(sub.name || 'Unknown')}</p>
+                        <div class="flex gap-2">
+                            <span class="text-xs bg-green-600 text-white px-2 py-1 rounded">✅ Active</span>
+                            <button type="button" onclick="removeSubscriberAdmin('${sub.chat_id}', '${escapeHtml(sub.name || 'Unknown')}')" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition">
+                                Remove
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400">Blocked from receiving alerts</p>
                     </div>
-                `).join('');
-            } catch (error) {
-                console.error('Failed to load blocked list:', error);
-            }
+                    <p class="text-xs text-gray-400">Chat ID: <code class="bg-gray-900 px-1 py-0.5 rounded">${sub.chat_id}</code></p>
+                    ${sub.username ? `<p class="text-xs text-gray-400">Telegram: <code class="bg-gray-900 px-1 py-0.5 rounded">@${escapeHtml(sub.username)}</code></p>` : ''}
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load admin subscribers:', error);
         }
+    }
 
-        async function unblockUser(chatId) {
-            if (!confirm(`Unblock user ${chatId}? They will be able to subscribe again.`)) return;
+    async function addManualSubscriber() {
+        const chatId = document.getElementById('manual-chat-id').value.trim();
+        const name = document.getElementById('manual-name').value.trim();
+        
+        if (!chatId) {
+            showToast('Please enter a Chat ID', 'warning');
+            return;
+        }
+        
+        if (!/^\d+$/.test(chatId)) {
+            showToast('Chat ID must contain only numbers', 'error');
+            return;
+        }
+        
+        try {
+            const response = await apiCall('/telegram/add_subscriber', {
+                method: 'POST',
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    name: name || 'Manual Entry'
+                })
+            });
             
-            try {
-                const response = await apiCall('/telegram/unblock', {
-                    method: 'POST',
-                    body: JSON.stringify({ chat_id: chatId })
-                });
-                
-                if (response.success) {
-                    showToast('User unblocked successfully', 'success');
-                    await loadAdminBlockedList();
-                } else {
-                    showToast('Failed to unblock user', 'error');
-                }
-            } catch (error) {
-                showToast('Error unblocking user', 'error');
+            if (response.success) {
+                showToast('Subscriber added successfully!', 'success');
+                document.getElementById('manual-chat-id').value = '';
+                document.getElementById('manual-name').value = '';
+                await loadTelegramSubscribers();
+                await loadAdminSubscribersList();
+            } else {
+                showToast(response.message || 'Failed to add subscriber', 'error');
             }
+        } catch (error) {
+            showToast('Error adding subscriber', 'error');
         }
+    }
 
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
-
-        // Toast Notifications
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const colors = {
-                success: 'bg-green-600',
-                error: 'bg-red-600',
-                warning: 'bg-yellow-600',
-                info: 'bg-blue-600'
-            };
+    async function removeSubscriber(chatId) {
+        if (!confirm('Remove this subscriber?')) return;
+        
+        try {
+            const response = await apiCall('/telegram/remove_subscriber', {
+                method: 'POST',
+                body: JSON.stringify({ chat_id: chatId })
+            });
             
-            const toast = document.createElement('div');
-            toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-xl fade-in`;
-            toast.textContent = message;
+            if (response.success) {
+                showToast('Subscriber removed', 'success');
+                await loadTelegramSubscribers();
+                await loadAdminSubscribersList();
+            } else {
+                showToast('Failed to remove subscriber', 'error');
+            }
+        } catch (error) {
+            showToast('Error removing subscriber', 'error');
+        }
+    }
+
+    async function removeSubscriberAdmin(chatId, name) {
+        if (!confirm(`Remove subscriber "${name}" (Chat ID: ${chatId})?`)) return;
+        
+        try {
+            const response = await apiCall('/telegram/remove_subscriber', {
+                method: 'POST',
+                body: JSON.stringify({ chat_id: chatId })
+            });
             
-            container.appendChild(toast);
+            if (response.success) {
+                showToast('Subscriber removed', 'success');
+                await loadTelegramSubscribers();
+                await loadAdminSubscribersList();
+                await loadAdminBlockedList();
+            } else {
+                showToast('Failed to remove subscriber', 'error');
+            }
+        } catch (error) {
+            showToast('Error removing subscriber', 'error');
+        }
+    }
+
+    async function loadAdminBlockedList() {
+        try {
+            const response = await apiCall('/telegram/blocked');
+            const list = document.getElementById('admin-blocked-list');
+            const count = document.getElementById('blocked-count');
             
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // API Calls
-        async function apiCall(endpoint, options = {}) {
-            try {
-                const response = await fetch(`/api${endpoint}`, {
-                    headers: {'Content-Type': 'application/json'},
-                    ...options
-                });
-                
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        showToast('Unauthorized - Please login', 'error');
-                        state.isAdminAuthenticated = false;
-                        closeAdminPanel();
-                        closeCameraManager();
-                        throw new Error('Unauthorized');
-                    }
-                    throw new Error(`API Error: ${response.status}`);
-                }
-                return response.json();
-            } catch (error) {
-                console.error('API call failed:', error);
-                if (error.message !== 'Unauthorized') {
-                    showToast('Operation failed', 'error');
-                }
-                throw error;
-            }
-        }
-
-        // Settings
-        async function loadSettings() {
-            try {
-                const data = await apiCall('/settings');
-                state.settings = data.settings;
-                document.getElementById('fall-threshold').value = data.settings.fall_threshold;
-                document.getElementById('fall-delay').value = data.settings.fall_delay_seconds;
-            } catch (error) {
-                console.error('Failed to load settings:', error);
-            }
-        }
-
-        document.getElementById('settings-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await apiCall('/settings', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        fall_threshold: parseFloat(document.getElementById('fall-threshold').value),
-                        fall_delay_seconds: parseInt(document.getElementById('fall-delay').value)
-                    })
-                });
-                showToast('Settings saved successfully');
-                loadCameraStatusList();
-            } catch (error) {
-                // Error already handled by apiCall
-            }
-        });
-
-        // Camera Management
-        async function loadCameras() {
-            try {
-                const data = await apiCall('/cameras');
-                state.cameras = data.cameras;
-                
-                const currentCamera = state.cameras.find(c => c.id === state.mainStreamId);
-                if (!currentCamera || !currentCamera.isLive) {
-                    const firstLive = state.cameras.find(c => c.isLive);
-                    if (firstLive) {
-                        state.mainStreamId = firstLive.id;
-                    }
-                }
-                
-                renderCameraGrid();
-                updateMainFeed();
-            } catch (error) {
-                console.error('Failed to load cameras:', error);
-            }
-        }
-
-        function renderCameraGrid() {
-            const grid = document.getElementById('camera-grid');
-            const noMsg = document.getElementById('no-cameras');
-            
-            if (state.cameras.length === 0) {
-                grid.classList.add('hidden');
-                noMsg.classList.remove('hidden');
+            if (!response.blocked || response.blocked.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No blocked users. Removed subscribers will appear here.</p>';
+                count.textContent = '0';
                 return;
             }
             
-            grid.classList.remove('hidden');
-            noMsg.classList.add('hidden');
+            count.textContent = response.blocked.length;
             
-            grid.innerHTML = state.cameras.map(cam => {
-                const isActive = cam.id === state.mainStreamId;
-                const isFall = cam.color === 'red';
-                const isLive = cam.isLive;
-                
-                return `
-                <div class="camera-thumbnail ${isActive ? 'active' : ''} ${isFall ? 'fall-detected' : ''}" 
-                     onclick="switchMainFeed('${cam.id}')"
-                     data-camera-id="${cam.id}">
-                    ${isLive ? `
-                        <img src="/video_feed/${cam.id}" 
-                             class="w-full h-full object-cover"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                             onload="this.style.display='block'; if(this.nextElementSibling) this.nextElementSibling.style.display='none';"
-                             style="display: block;">
-                        <div class="absolute inset-0 bg-gray-700 flex items-center justify-center flex-col text-center p-2" style="display: none;">
-                            <svg class="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                            <p class="text-xs">Stream Error</p>
-                        </div>
-                    ` : `
-                        <div class="absolute inset-0 bg-gray-700 flex items-center justify-center flex-col text-center p-2">
-                            <svg class="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                            </svg>
-                            <p class="text-xs">Offline</p>
-                        </div>
-                    `}
-                    <div class="absolute top-2 left-2 status-badge ${isFall ? 'bg-red-600' : isLive ? 'bg-green-600' : 'bg-gray-600'} text-xs">
-                        ${isFall ? '⚠️ FALL' : isLive ? '✓ OK' : '○ OFF'}
+            list.innerHTML = response.blocked.map(chatId => `
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-red-500 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="font-semibold text-white">Chat ID: ${chatId}</p>
+                        <button type="button" onclick="unblockUser('${chatId}')" class="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition">
+                            Unblock
+                        </button>
                     </div>
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-                        <p class="text-xs font-semibold truncate">${cam.name}</p>
-                        ${!isLive ? '<p class="text-xs text-gray-400">Camera stopped</p>' : ''}
+                    <p class="text-xs text-gray-400">Blocked from receiving alerts</p>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load blocked list:', error);
+        }
+    }
+
+    async function unblockUser(chatId) {
+        if (!confirm(`Unblock user ${chatId}? They will be able to subscribe again.`)) return;
+        
+        try {
+            const response = await apiCall('/telegram/unblock', {
+                method: 'POST',
+                body: JSON.stringify({ chat_id: chatId })
+            });
+            
+            if (response.success) {
+                showToast('User unblocked successfully', 'success');
+                await loadAdminBlockedList();
+            } else {
+                showToast('Failed to unblock user', 'error');
+            }
+        } catch (error) {
+            showToast('Error unblocking user', 'error');
+        }
+    }
+
+    // Camera Manager
+    function openCameraManager() {
+        document.getElementById('camera-manager-modal').classList.remove('hidden');
+        loadCameraList();
+    }
+
+    function closeCameraManager() {
+        document.getElementById('camera-manager-modal').classList.add('hidden');
+    }
+
+    async function loadCameraList() {
+        try {
+            const data = await apiCall('/cameras/all_definitions');
+            const list = document.getElementById('camera-list');
+            
+            if (data.definitions.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No cameras configured</p>';
+                return;
+            }
+            
+            list.innerHTML = data.definitions.map(cam => `
+                <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <div class="flex-1">
+                        <p class="font-semibold">${cam.name}</p>
+                        <p class="text-xs text-gray-500">Source: ${cam.source}</p>
+                        <p class="text-xs ${cam.isLive ? 'text-green-500' : 'text-gray-500'}">
+                            ${cam.isLive ? '● Live' : '○ Stopped'}
+                        </p>
+                    </div>
+                    <div class="flex gap-2">
+                        ${cam.isLive ? 
+                            `<button onclick="stopCamera('${cam.id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition">Stop</button>` :
+                            `<button onclick="startCamera('${cam.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition">Start</button>`
+                        }
+                        <button onclick="removeCamera('${cam.id}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm font-medium transition">Remove</button>
                     </div>
                 </div>
-            `}).join('');
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load camera list:', error);
         }
+    }
 
-        function switchMainFeed(cameraId) {
-            state.mainStreamId = cameraId;
-            const img = document.getElementById('main-stream-img');
-            const errorDiv = document.getElementById('main-stream-error');
+    async function loadCameraStatusList() {
+        try {
+            const data = await apiCall('/cameras/all_definitions');
+            const container = document.getElementById('camera-status-list');
             
-            img.style.display = 'block';
-            errorDiv.classList.add('hidden');
-            img.src = `/video_feed/${cameraId}`;
-            
-            renderCameraGrid();
-            updateMainFeed();
-        }
-
-        function handleMainStreamError(img) {
-            img.style.display = 'none';
-            document.getElementById('main-stream-error').classList.remove('hidden');
-        }
-
-        function handleMainStreamLoad(img) {
-            img.style.display = 'block';
-            document.getElementById('main-stream-error').classList.add('hidden');
-        }
-
-        function updateMainFeed() {
-            const camera = state.cameras.find(c => c.id === state.mainStreamId);
-            if (!camera) return;
-            
-            const badge = document.getElementById('main-status-badge');
-            const name = document.getElementById('main-stream-name');
-            const alert = document.getElementById('fall-alert-overlay');
-            
-            name.textContent = camera.name;
-            
-            if (camera.color === 'red') {
-                badge.className = 'status-badge bg-red-600 fall-alert';
-                badge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>FALL DETECTED</span>';
-                alert.classList.remove('hidden');
-                document.getElementById('fall-location').textContent = camera.name;
-            } else {
-                badge.className = 'status-badge bg-green-600';
-                badge.innerHTML = '<span class="w-2 h-2 bg-white rounded-full live-indicator"></span><span>NORMAL</span>';
-                alert.classList.add('hidden');
-            }
-        }
-
-        function dismissAlert() {
-            document.getElementById('fall-alert-overlay').classList.add('hidden');
-        }
-
-        // Add Camera
-        document.getElementById('add-camera-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await apiCall('/cameras/add', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        name: document.getElementById('camera-name').value,
-                        source: document.getElementById('camera-source').value
-                    })
-                });
-                showToast('Camera added successfully');
-                e.target.reset();
-                loadCameras();
-                loadCameraStatusList();
-            } catch (error) {
-                // Error already handled
-            }
-        });
-
-        document.getElementById('upload-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const nameInput = document.getElementById('upload-name');
-            const fileInput = document.getElementById('video-file');
-            const submitBtn = document.getElementById('upload-submit-btn');
-            const progressDiv = document.getElementById('upload-progress');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const progressText = document.getElementById('upload-progress-text');
-            
-            if (!nameInput.value || !fileInput.files[0]) {
-                showToast('Please provide a name and select a video file', 'error');
+            if (data.definitions.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No cameras configured</p>';
                 return;
             }
             
-            const file = fileInput.files[0];
-            const maxSize = 500 * 1024 * 1024;
-            
-            if (file.size > maxSize) {
-                showToast('File too large. Maximum size is 500MB', 'error');
-                return;
-            }
-            
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span>Uploading...';
-            progressDiv.classList.remove('hidden');
-            progressBar.style.width = '0%';
-            progressText.textContent = 'Uploading...';
-            
-            const formData = new FormData();
-            formData.append('name', nameInput.value);
-            formData.append('video_file', file);
-            
-            try {
-                const xhr = new XMLHttpRequest();
+            container.innerHTML = data.definitions.map(cam => {
+                const statusColor = cam.isLive ? 
+                    (cam.status === 'FALL DETECTED' ? 'text-red-500' : 'text-green-500') : 
+                    'text-gray-500';
                 
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = (e.loaded / e.total) * 100;
-                        progressBar.style.width = percentComplete + '%';
-                        progressText.textContent = `Uploading: ${Math.round(percentComplete)}%`;
-                    }
-                });
-                
-                xhr.addEventListener('load', async () => {
-                    if (xhr.status === 200) {
-                        const data = JSON.parse(xhr.responseText);
-                        
-                        if (data.success) {
-                            progressText.textContent = 'Processing video...';
-                            progressBar.style.width = '100%';
-                            
-                            showToast('Video uploaded successfully!', 'success');
-                            e.target.reset();
-                            
-                            await loadCameras();
-                            loadCameraStatusList();
-                            
-                            if (data.camera_id) {
-                                setTimeout(() => {
-                                    switchMainFeed(data.camera_id);
-                                }, 500);
-                            }
-                        } else {
-                            showToast(data.message || 'Upload failed', 'error');
-                        }
-                    } else if (xhr.status === 401) {
-                        showToast('Unauthorized - Please login', 'error');
-                        state.isAdminAuthenticated = false;
-                        closeAdminPanel();
-                    } else {
-                        showToast('Upload failed: Server error', 'error');
-                    }
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Upload & Start Stream';
-                    progressDiv.classList.add('hidden');
-                });
-                
-                xhr.addEventListener('error', () => {
-                    showToast('Upload failed: Network error', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Upload & Start Stream';
-                    progressDiv.classList.add('hidden');
-                });
-                
-                xhr.open('POST', '/api/cameras/upload');
-                xhr.send(formData);
-                
-            } catch (error) {
-                console.error('Upload error:', error);
-                showToast('Upload failed: ' + error.message, 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Upload & Start Stream';
-                progressDiv.classList.add('hidden');
-            }
-        });
-
-        async function stopCamera(id) {
-            if (!confirm('Stop this camera stream?')) return;
-            try {
-                await apiCall(`/cameras/stop/${id}`, { method: 'POST' });
-                showToast('Camera stopped');
-                loadCameras();
-                loadCameraList();
-                loadCameraStatusList();
-            } catch (error) {
-                // Error already handled
-            }
+                return `
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-bold text-lg">${cam.name}</h4>
+                            <span class="status-badge ${cam.isLive ? (cam.status === 'FALL DETECTED' ? 'bg-red-600' : 'bg-green-600') : 'bg-gray-600'}">
+                                ${cam.isLive ? '● LIVE' : '○ OFFLINE'}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-400">Status</p>
+                                <p class="${statusColor} font-semibold">${cam.status || 'Offline'}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400">FPS</p>
+                                <p class="text-white font-semibold">${cam.fps ? cam.fps.toFixed(1) : '0.0'}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400">Confidence</p>
+                                <p class="text-white font-semibold">${cam.confidence_score ? (cam.confidence_score * 100).toFixed(1) + '%' : '0.0%'}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400">Source</p>
+                                <p class="text-white font-semibold truncate">${cam.source}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Failed to load camera status:', error);
         }
+    }
 
-        async function startCamera(id) {
-            try {
-                await apiCall('/cameras/add_existing', {
-                    method: 'POST',
-                    body: JSON.stringify({ camera_id: id })
-                });
-                showToast('Camera started');
-                loadCameras();
-                loadCameraList();
-                loadCameraStatusList();
-            } catch (error) {
-                // Error already handled
-            }
+    function switchTab(tab) {
+        const webcamBtn = document.getElementById('tab-webcam');
+        const uploadBtn = document.getElementById('tab-upload');
+        const webcamForm = document.getElementById('add-camera-form');
+        const uploadForm = document.getElementById('upload-form');
+
+        if (tab === 'webcam') {
+            webcamBtn.classList.add('bg-blue-600');
+            webcamBtn.classList.remove('bg-gray-700');
+            uploadBtn.classList.remove('bg-blue-600');
+            uploadBtn.classList.add('bg-gray-700');
+            webcamForm.classList.remove('hidden');
+            uploadForm.classList.add('hidden');
+        } else {
+            uploadBtn.classList.add('bg-blue-600');
+            uploadBtn.classList.remove('bg-gray-700');
+            webcamBtn.classList.remove('bg-blue-600');
+            webcamBtn.classList.add('bg-gray-700');
+            uploadForm.classList.remove('hidden');
+            webcamForm.classList.add('hidden');
         }
+    }
 
-        async function removeCamera(id) {
-            if (!confirm('Permanently remove this camera? This cannot be undone.')) return;
-            
-            try {
-                await fetch(`/api/cameras/remove/${id}`, { method: 'DELETE' });
-                showToast('Camera removed');
-                
-                if (state.mainStreamId === id) {
-                    const remaining = state.cameras.filter(c => c.id !== id);
-                    if (remaining.length > 0) {
-                        switchMainFeed(remaining[0].id);
-                    }
-                }
-                
-                loadCameras();
-                loadCameraList();
-                loadCameraStatusList();
-            } catch (error) {
-                showToast('Failed to remove camera', 'error');
-            }
-        }
-
-        // Polling
-        function startPolling() {
+    // Add Camera
+    document.getElementById('add-camera-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            await apiCall('/cameras/add', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: document.getElementById('camera-name').value,
+                    source: document.getElementById('camera-source').value
+                })
+            });
+            showToast('Camera added successfully');
+            e.target.reset();
             loadCameras();
-            state.pollingInterval = setInterval(() => {
-                loadCameras();
-                if (state.isAdminAuthenticated && document.getElementById('admin-panel-modal').classList.contains('hidden') === false) {
-                    loadCameraStatusList();
+            loadCameraStatusList();
+        } catch (error) {
+            // Error already handled
+        }
+    });
+
+    // FIXED: Video Upload Handler - With proper error handling, timeout and cancel support
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const nameInput = document.getElementById('upload-name');
+        const fileInput = document.getElementById('video-file');
+        const submitBtn = document.getElementById('upload-submit-btn');
+        const progressDiv = document.getElementById('upload-progress');
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+
+        if (!nameInput.value || !fileInput.files[0]) {
+            showToast('Please provide a name and select a video file', 'error');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const maxSize = 500 * 1024 * 1024; // 500MB
+
+        if (file.size > maxSize) {
+            showToast('File too large. Maximum size is 500MB', 'error');
+            return;
+        }
+
+        // Show progress
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span>Uploading...';
+        progressDiv.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Starting upload...';
+
+        const formData = new FormData();
+        formData.append('name', nameInput.value);
+        formData.append('video_file', file);
+
+        console.log('[UPLOAD] Starting upload:', { name: nameInput.value, size: file.size, type: file.type });
+
+        const resetButton = () => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Upload & Start Stream';
+            state.currentUploadXhr = null;
+        };
+
+        // Add or show a cancel button in the progress area
+        let cancelBtn = document.getElementById('upload-cancel-btn');
+        if (!cancelBtn) {
+            cancelBtn = document.createElement('button');
+            cancelBtn.id = 'upload-cancel-btn';
+            cancelBtn.className = 'mt-2 w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition';
+            cancelBtn.textContent = 'Cancel Upload';
+            cancelBtn.addEventListener('click', () => {
+                if (state.currentUploadXhr) {
+                    state.currentUploadXhr.abort();
+                    showToast('Upload cancelled', 'warning');
                 }
-            }, 2000);
+                progressDiv.classList.add('hidden');
+                resetButton();
+            });
+            progressDiv.appendChild(cancelBtn);
+        } else {
+            cancelBtn.style.display = 'block';
         }
 
-        function stopPolling() {
-            if (state.pollingInterval) {
-                clearInterval(state.pollingInterval);
-                state.pollingInterval = null;
+        try {
+            // Use XMLHttpRequest with progress tracking
+            const xhr = new XMLHttpRequest();
+            state.currentUploadXhr = xhr;
+
+            // Set timeout to 5 minutes (300 seconds) for large files
+            xhr.timeout = 300000;
+
+            xhr.upload.addEventListener('progress', (ev) => {
+                if (ev.lengthComputable) {
+                    const percentComplete = (ev.loaded / ev.total) * 100;
+                    console.log('[UPLOAD] Progress:', Math.round(percentComplete) + '%');
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.textContent = `Uploading: ${Math.round(percentComplete)}%`;
+                }
+            });
+
+            xhr.addEventListener('loadstart', () => {
+                console.log('[UPLOAD] Upload started');
+            });
+
+            xhr.addEventListener('load', () => {
+                console.log('[UPLOAD] Response received:', { status: xhr.status, responseType: xhr.responseType });
+                try {
+                    let data = null;
+                    try {
+                        data = JSON.parse(xhr.responseText);
+                    } catch (err) {
+                        console.error('[UPLOAD] Failed to parse JSON, raw response:', xhr.responseText);
+                    }
+
+                    if (xhr.status === 200 && data && data.success) {
+                        progressText.textContent = 'Processing video...';
+                        progressBar.style.width = '100%';
+                        showToast('Video uploaded successfully!', 'success');
+                        nameInput.value = '';
+                        fileInput.value = '';
+
+                        // Hide cancel button
+                        if (cancelBtn) cancelBtn.style.display = 'none';
+
+                        // Reload cameras and status
+                        setTimeout(() => {
+                            loadCameras();
+                            loadCameraStatusList();
+                            progressDiv.classList.add('hidden');
+                            resetButton();
+
+                            if (data.camera_id) {
+                                // Wait briefly to allow backend to register camera, then switch main feed
+                                setTimeout(() => {
+                                    loadCameras();
+                                    try { switchMainFeed(data.camera_id); } catch (e) { console.error('Failed to switch to uploaded camera:', e); }
+                                }, 1000);
+                            }
+                        }, 1500);
+                    } else {
+                        const errorMsg = (data && data.message) ? data.message : `Upload failed with status ${xhr.status}`;
+                        console.error('[UPLOAD] Server returned error:', errorMsg);
+                        showToast(errorMsg, 'error');
+                        progressDiv.classList.add('hidden');
+                        resetButton();
+                        if (cancelBtn) cancelBtn.style.display = 'none';
+                    }
+                } catch (parseError) {
+                    console.error('[UPLOAD] Error handling response:', parseError);
+                    showToast('Upload response error: ' + parseError.message, 'error');
+                    progressDiv.classList.add('hidden');
+                    resetButton();
+                    if (cancelBtn) cancelBtn.style.display = 'none';
+                }
+            });
+
+            xhr.addEventListener('error', (err) => {
+                console.error('[UPLOAD] Network error:', err);
+                showToast('Upload failed: Network error or server unreachable', 'error');
+                progressDiv.classList.add('hidden');
+                resetButton();
+                if (cancelBtn) cancelBtn.style.display = 'none';
+            });
+
+            xhr.addEventListener('abort', () => {
+                console.warn('[UPLOAD] Upload aborted');
+                showToast('Upload was cancelled', 'warning');
+                progressDiv.classList.add('hidden');
+                resetButton();
+                if (cancelBtn) cancelBtn.style.display = 'none';
+            });
+
+            xhr.addEventListener('timeout', () => {
+                console.error('[UPLOAD] Upload timeout after 5 minutes');
+                showToast('Upload timeout: File took too long to upload. Please try again.', 'error');
+                progressDiv.classList.add('hidden');
+                resetButton();
+                if (cancelBtn) cancelBtn.style.display = 'none';
+            });
+
+            xhr.open('POST', '/api/cameras/upload');
+            xhr.send(formData);
+
+        } catch (error) {
+            console.error('[UPLOAD] Exception occurred:', error);
+            showToast('Upload failed: ' + error.message, 'error');
+            progressDiv.classList.add('hidden');
+            resetButton();
+            if (cancelBtn) cancelBtn.style.display = 'none';
+        }
+    });
+
+    async function stopCamera(id) {
+        if (!confirm('Stop this camera stream?')) return;
+        try {
+            await apiCall(`/cameras/stop/${id}`, { method: 'POST' });
+            showToast('Camera stopped');
+            loadCameras();
+            loadCameraList();
+            loadCameraStatusList();
+        } catch (error) {
+            // Error already handled
+        }
+    }
+
+    async function startCamera(id) {
+        try {
+            await apiCall('/cameras/add_existing', {
+                method: 'POST',
+                body: JSON.stringify({ camera_id: id })
+            });
+            showToast('Camera started');
+            loadCameras();
+            loadCameraList();
+            loadCameraStatusList();
+        } catch (error) {
+            // Error already handled
+        }
+    }
+
+    async function removeCamera(id) {
+        if (!confirm('Permanently remove this camera? This cannot be undone.')) return;
+        
+        try {
+            await fetch(`/api/cameras/remove/${id}`, { method: 'DELETE' });
+            showToast('Camera removed');
+            
+            if (state.mainStreamId === id) {
+                const remaining = state.cameras.filter(c => c.id !== id);
+                if (remaining.length > 0) {
+                    switchMainFeed(remaining[0].id);
+                }
             }
+            
+            loadCameras();
+            loadCameraList();
+            loadCameraStatusList();
+        } catch (error) {
+            showToast('Failed to remove camera', 'error');
         }
+    }
 
-        // Initialize
-        window.addEventListener('load', () => {
-            restorePageFromSession();
-            checkAdminAuth();
-        });
-    </script>
+    // Incident Reports
+    async function loadIncidents() {
+        try {
+            const response = await apiCall('/incidents');
+            const list = document.getElementById('incidents-list');
+            
+            if (!response.incidents || response.incidents.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No incidents reported yet</p>';
+                return;
+            }
+            
+            list.innerHTML = response.incidents.map(incident => `
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 incident-card">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h4 class="font-bold text-white">Incident ${incident.id}</h4>
+                            <p class="text-sm text-gray-400">${incident.timestamp}</p>
+                        </div>
+                        <span class="status-badge ${incident.severity === 'HIGH' ? 'bg-red-600' : incident.severity === 'MEDIUM' ? 'bg-yellow-600' : 'bg-green-600'}">
+                            ${incident.severity}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div>
+                            <p class="text-gray-400">Location</p>
+                            <p class="text-white">${escapeHtml(incident.location)}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400">Confidence</p>
+                            <p class="text-white">${(incident.confidence * 100).toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="generateIncidentPDF('${incident.id}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded transition">
+                            📄 PDF Report
+                        </button>
+                        <button onclick="editIncidentNotes('${incident.id}')" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm py-2 rounded transition">
+                            📝 Notes
+                        </button>
+                        <button onclick="deleteIncident('${incident.id}')" class="px-3 bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded transition">
+                            🗑️
+                        </button>
+                    </div>
+                    
+                    ${incident.notes ? `
+                        <div class="mt-3 p-2 bg-gray-700 rounded text-sm">
+                            <p class="text-gray-300">${escapeHtml(incident.notes)}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load incidents:', error);
+        }
+    }
+
+    async function generateIncidentPDF(incidentId) {
+        try {
+            const response = await fetch(`/api/incidents/${incidentId}/pdf`, {
+                headers: {
+                    'Accept': 'application/pdf'
+                }
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `incident_${incidentId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showToast('PDF report downloaded');
+            } else {
+                showToast('Failed to generate PDF', 'error');
+            }
+        } catch (error) {
+            showToast('Error generating PDF', 'error');
+        }
+    }
+
+    function editIncidentNotes(incidentId) {
+        const notes = prompt('Enter notes for this incident:');
+        if (notes !== null) {
+            apiCall(`/incidents/${incidentId}/notes`, {
+                method: 'POST',
+                body: JSON.stringify({ notes: notes })
+            })
+            .then(() => {
+                showToast('Notes updated successfully');
+                loadIncidents();
+            })
+            .catch(error => {
+                showToast('Failed to update notes', 'error');
+            });
+        }
+    }
+
+    async function deleteIncident(incidentId) {
+        if (!confirm('Delete this incident report? This cannot be undone.')) return;
+        
+        try {
+            await apiCall(`/incidents/${incidentId}`, { method: 'DELETE' });
+            showToast('Incident deleted');
+            loadIncidents();
+        } catch (error) {
+            showToast('Failed to delete incident', 'error');
+        }
+    }
+
+    function refreshIncidents() {
+        loadIncidents();
+        showToast('Incidents refreshed');
+    }
+
+    // Utility Functions
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Toast Notifications
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const colors = {
+            success: 'bg-green-600',
+            error: 'bg-red-600',
+            warning: 'bg-yellow-600',
+            info: 'bg-blue-600'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-xl fade-in`;
+        toast.textContent = message;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // API Calls
+    async function apiCall(endpoint, options = {}) {
+        try {
+            const response = await fetch(`/api${endpoint}`, {
+                headers: {'Content-Type': 'application/json'},
+                ...options
+            });
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    showToast('Unauthorized - Please login', 'error');
+                    state.isAdminAuthenticated = false;
+                    closeAdminPanel();
+                    closeCameraManager();
+                    throw new Error('Unauthorized');
+                }
+                throw new Error(`API Error: ${response.status}`);
+            }
+            return response.json();
+        } catch (error) {
+            console.error('API call failed:', error);
+            if (error.message !== 'Unauthorized') {
+                showToast('Operation failed', 'error');
+            }
+            throw error;
+        }
+    }
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[INIT] Page loaded, initializing...');
+        restorePageFromSession();
+        
+        // Initialize tab switching
+        switchTab('webcam');
+    });
+</script>
 </body>
 </html>

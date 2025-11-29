@@ -1,0 +1,72 @@
+[
+  {
+    "id": "0206985b",
+    "fall_id": "cam_c9071232_person1_1764423059",
+    "timestamp": "2025-11-29 21:30:59",
+    "camera_name": "trst",
+    "camera_id": "cam_c9071232",
+    "person_id": 1,
+    "person_label": "Person #1",
+    "confidence": 0.99,
+    "severity": "HIGH",
+    "snapshot_file": "0206985b_2025-11-29_21-30-59.jpg",
+    "notes": "",
+    "location": "trst - Person #1"
+  },
+  {
+    "id": "eab0d443",
+    "fall_id": "cam_c9071232_person2_1764423068",
+    "timestamp": "2025-11-29 21:31:08",
+    "camera_name": "trst",
+    "camera_id": "cam_c9071232",
+    "person_id": 2,
+    "person_label": "Person #2",
+    "confidence": 0.99,
+    "severity": "HIGH",
+    "snapshot_file": "eab0d443_2025-11-29_21-31-08.jpg",
+    "notes": "",
+    "location": "trst - Person #2"
+  },
+  {
+    "id": "14c1f002",
+    "fall_id": "cam_c9071232_person1_1764423076",
+    "timestamp": "2025-11-29 21:31:16",
+    "camera_name": "trst",
+    "camera_id": "cam_c9071232",
+    "person_id": 1,
+    "person_label": "Person #1",
+    "confidence": 0.99,
+    "severity": "HIGH",
+    "snapshot_file": "14c1f002_2025-11-29_21-31-16.jpg",
+    "notes": "",
+    "location": "trst - Person #1"
+  },
+  {
+    "id": "13cee5c3",
+    "fall_id": "cam_c9071232_person1_1764423085",
+    "timestamp": "2025-11-29 21:31:25",
+    "camera_name": "trst",
+    "camera_id": "cam_c9071232",
+    "person_id": 1,
+    "person_label": "Person #1",
+    "confidence": 0.99,
+    "severity": "HIGH",
+    "snapshot_file": "13cee5c3_2025-11-29_21-31-25.jpg",
+    "notes": "",
+    "location": "trst - Person #1"
+  },
+  {
+    "id": "c619c83a",
+    "fall_id": "cam_c9071232_person1_1764423093",
+    "timestamp": "2025-11-29 21:31:33",
+    "camera_name": "trst",
+    "camera_id": "cam_c9071232",
+    "person_id": 1,
+    "person_label": "Person #1",
+    "confidence": 0.99,
+    "severity": "HIGH",
+    "snapshot_file": "c619c83a_2025-11-29_21-31-33.jpg",
+    "notes": "",
+    "location": "trst - Person #1"
+  }
+]

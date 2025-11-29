@@ -8,6 +8,76 @@ import mediapipe as mp
 # Import constants to ensure input sequence shapes match the model
 from app.skeleton_lstm import FEATURE_SIZE, SEQUENCE_LENGTH 
 
+# --- Multi-Person Detection Support ---
+def detect_multiple_people(image, mp_pose_instance, use_hog=False):
+    """
+    Detects multiple people in the frame using MediaPipe Pose (primary method).
+    HOG is disabled by default for performance - uses pure MediaPipe multi-detection.
+    
+    Args:
+        image: Input frame
+        mp_pose_instance: MediaPipe Pose instance
+        use_hog: Whether to use HOG (disabled for performance)
+    
+    Returns list of person objects with landmarks and bounding boxes, sorted by area.
+    """
+    mp_pose = mp.solutions.pose
+    people = []
+    h, w, _ = image.shape
+    
+    if h < 100 or w < 100:  # Skip if image too small
+        return people
+    
+    detected_regions = set()  # Track regions to avoid duplicate detections
+    
+    try:
+        # ONLY use MediaPipe full-frame detection (no HOG for performance)
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False
+        full_results = mp_pose_instance.process(image_rgb)
+        image.flags.writeable = True
+        
+        if full_results and full_results.pose_landmarks:
+            visible_landmarks = [lm for lm in full_results.pose_landmarks.landmark if lm.visibility > 0.01]
+            
+            if len(visible_landmarks) >= 1:
+                x_coords = [lm.x * w for lm in visible_landmarks]
+                y_coords = [lm.y * h for lm in visible_landmarks]
+                
+                min_x, max_x = min(x_coords), max(x_coords)
+                min_y, max_y = min(y_coords), max(y_coords)
+                
+                # Add padding
+                pad_x = (max_x - min_x) * 0.10 if (max_x - min_x) > 0 else w * 0.02
+                pad_y = (max_y - min_y) * 0.10 if (max_y - min_y) > 0 else h * 0.02
+                
+                bx = max(0, int(min_x - pad_x))
+                by = max(0, int(min_y - pad_y))
+                bw = min(w - bx, int(max_x - min_x + 2 * pad_x))
+                bh = min(h - by, int(max_y - min_y + 2 * pad_y))
+                
+                if bw > 15 and bh > 25:
+                    detected_regions.add((bx, by, bw, bh))
+                    conf = float(np.mean([lm.visibility for lm in visible_landmarks]))
+                    people.append({
+                        'landmarks': full_results.pose_landmarks,
+                        'bbox': (bx, by, bw, bh),
+                        'x': bx + bw / 2,
+                        'y': by + bh / 2,
+                        'area': bw * bh,
+                        'confidence': conf
+                    })
+                    print(f"[DETECTION] Found person #{len(people)} at ({bx}, {by}) size={bw}x{bh}, conf={conf:.2f}")
+        
+        # Sort by area (largest first)
+        people.sort(key=lambda p: p['area'], reverse=True)
+        
+    except Exception as e:
+        print(f"[ERROR] Multi-person detection failed: {e}")
+        pass
+
+    return people
+
 # --- Visualization ---
 def draw_skeleton(image, results, is_fall_confirmed):
     """Draws the MediaPipe skeleton and connections on the image."""

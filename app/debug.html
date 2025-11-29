@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FallGuard Debug</title>
+</head>
+<body>
+    <h1>FallGuard Debug Page</h1>
+    <button onclick="testModal()">Test Admin Panel</button>
+    <button onclick="testAPI()">Test API Connection</button>
+    
+    <div id="debug-output" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+    <script>
+        function log(msg) {
+            const output = document.getElementById('debug-output');
+            output.innerHTML += '<p>' + msg + '</p>';
+            console.log(msg);
+        }
+
+        function testModal() {
+            log('Testing modal opening...');
+            try {
+                // Test if basic JavaScript is working
+                log('✓ Basic JavaScript is working');
+                
+                // Test if we can access the modal element
+                const modal = document.getElementById('admin-panel-modal');
+                if (modal) {
+                    log('✓ Found admin panel modal element');
+                    modal.classList.remove('hidden');
+                    log('✓ Removed hidden class from modal');
+                } else {
+                    log('✗ Could not find admin panel modal element');
+                }
+            } catch (error) {
+                log('✗ Error: ' + error.message);
+            }
+        }
+
+        function testAPI() {
+            log('Testing API connection...');
+            fetch('/api/admin/check')
+                .then(response => response.json())
+                .then(data => {
+                    log('✓ API Response: ' + JSON.stringify(data));
+                })
+                .catch(error => {
+                    log('✗ API Error: ' + error.message);
+                });
+        }
+    </script>
+</body>
+</html>
