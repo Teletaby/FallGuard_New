@@ -1,0 +1,255 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.gradient-bg {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #3f3f3f 100%);
+}
+
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Ensure nav is clickable on landing page */
+nav {
+    pointer-events: auto !important;
+    z-index: 30 !important;
+    position: relative;
+}
+
+nav button {
+    pointer-events: auto !important;
+}
+
+.live-indicator {
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.fall-alert {
+    animation: flash-alert 0.5s infinite alternate;
+}
+
+@keyframes flash-alert {
+    from { background-color: #dc2626; }
+    to { background-color: #991b1b; }
+}
+
+.fade-in {
+    animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.camera-thumbnail {
+    position: relative;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    background: #000;
+}
+
+.camera-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #000;
+}
+
+.camera-thumbnail:hover {
+    transform: scale(1.05);
+    border-color: #3b82f6;
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+}
+
+.camera-thumbnail.active {
+    border-color: #10b981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+.camera-thumbnail.fall-detected {
+    border-color: #ef4444;
+    animation: pulse-red 1s infinite;
+}
+
+.main-feed {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.main-feed img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    image-rendering: auto;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.hero-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Ensure all content in hero is above the overlay */
+.hero-section > * {
+    position: relative;
+    z-index: 10;
+}
+
+.hero-floating {
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.feature-card {
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+}
+
+.privacy-option {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.privacy-option.selected {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.incident-card {
+    transition: all 0.3s ease;
+}
+
+.incident-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.fall-alert-banner {
+    animation: slideInDown 0.5s ease-out, flash-alert 1s infinite alternate;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.urgent-pulse {
+    animation: urgentPulse 0.8s infinite;
+}
+
+@keyframes urgentPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* FIX: Modal visibility and clickability fixes */
+.hidden {
+    display: none !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+}
+
+/* Ensure visible modals are above everything */
+#admin-login-modal:not(.hidden),
+#admin-panel-modal:not(.hidden),
+#camera-manager-modal:not(.hidden),
+#telegram-subscribers-modal:not(.hidden) {
+    display: flex !important;
+    pointer-events: auto !important;
+    z-index: 50 !important;
+}
+
+/* Additional modal/backdrop robustness: ensure backdrops using Tailwind's "bg-black/.." patterns don't accidentally get a lower z-index */
+.fixed.inset-0[class*="bg-black"] {
+    z-index: 40 !important;
+}
+
+/* Ensure modal inner content sits above backdrop and is clickable */
+.modal-content {
+    position: relative;
+    z-index: 60;
+}
+
+/* Fix button z-index and clickability issues */
+button {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto !important;
+}
+
+/* Ensure overlays allow button clicks */
+.absolute button {
+    pointer-events: auto !important;
+}
+
+/* Ensure modal backdrops don't block clicks when hidden */
+.fixed.inset-0.bg-black {
+    z-index: 40;
+}

@@ -1,0 +1,11 @@
+torch
+torchvision
+opencv-python
+pandas
+scikit-learn
+joblib
+mediapipe
+requests
+python-pushbullet
+gunicorn
+flask
