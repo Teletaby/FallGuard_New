@@ -5,6 +5,7 @@ pandas
 scikit-learn
 joblib
 mediapipe
+ultralytics
 requests
 python-pushbullet
 gunicorn

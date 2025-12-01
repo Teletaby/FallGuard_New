@@ -11,9 +11,12 @@
 <body class="bg-gray-900 text-white">
     
     <!-- Landing Page -->
-    <div id="landing-page" class="hero-section gradient-bg">
+    <div id="landing-page" class="hero-section" style="background-image: url('/static/images/landing-bg.jpg'); background-size: cover; background-position: center; background-attachment: fixed;">
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-black/40 z-0"></div>
+        
         <!-- Top Navigation -->
-        <nav class="absolute top-0 left-0 right-0 z-20 px-6 py-4 bg-gradient-to-b from-black/50 to-transparent">
+        <nav class="absolute top-0 left-0 right-0 z-20 px-6 py-4 bg-gradient-to-b from-black/60 to-transparent">
             <div class="container mx-auto flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <img id="logo-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E" alt="FallGuard Logo" class="w-10 h-10 bg-white/20 rounded-lg p-2" title="Click to change logo">
@@ -33,26 +36,20 @@
             </div>
         </nav>
 
-        <div class="container mx-auto px-6 relative z-10">
-            <div class="text-center max-w-5xl mx-auto fade-in">
-                <div class="mb-12">
-                    <svg class="w-32 h-32 mx-auto text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                    </svg>
-                </div>
-                
-                <h1 class="text-6xl md:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl">
+        <div class="container mx-auto px-6 relative z-10 flex items-center justify-center min-h-screen">
+            <div class="text-center max-w-3xl mx-auto fade-in">
+                <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl">
                     FallGuard: Protect Your Loved Ones
                 </h1>
                 
-                <p class="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto font-light leading-relaxed">
-                    An AI-powered fall detection system<br>
+                <p class="text-lg md:text-2xl text-white/95 mb-12 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-lg">
+                    A lightweight fall detection system<br>
                     for ultimate peace of mind and<br>
                     keeping your family safe.
                 </p>
                 
                 <div class="flex flex-col sm:flex-row gap-6 justify-center">
-                    <button onclick="goToLearnMore()" class="group relative inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 shadow-2xl">
+                    <button onclick="goToLearnMore()" class="group relative inline-flex items-center gap-3 bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-2xl">
                         <span>LEARN MORE</span>
                         <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
@@ -64,93 +61,104 @@
     </div>
 
     <!-- Learn More Page -->
-    <div id="learn-more-page" class="hidden min-h-screen bg-gray-900 text-white">
-        <!-- Top Navigation -->
-        <nav class="sticky top-0 z-20 px-6 py-4 bg-gray-800 shadow-lg">
-            <div class="container mx-auto flex items-center justify-between">
-                <button onclick="goToHomepage()" class="flex items-center gap-3 hover:opacity-80 transition">
-                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
-                    <span class="text-xl font-bold">FallGuard</span>
-                </button>
-                <button onclick="goToLiveFeed()" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg font-semibold transition">
-                    Sign In
-                </button>
-            </div>
-        </nav>
+    <div id="learn-more-page" class="hidden min-h-screen bg-white text-gray-900">
+        <!-- Background Image Container - Only for Hero -->
+        <div class="relative" style="background-image: url('/static/images/learn-more-bg.jpg'); background-size: cover; background-position: center; background-attachment: fixed; min-height: 110vh;">
+            <!-- Fading Overlay - Gradients from dark to white -->
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-white" style="pointer-events: none;"></div>
+            
+            <!-- Top Navigation -->
+            <nav class="sticky top-0 z-20 px-6 py-4 bg-black/60 backdrop-blur-md shadow-lg border-b border-white/10">
+                <div class="container mx-auto flex items-center justify-between">
+                    <button onclick="goToHomepage()" class="flex items-center gap-3 hover:opacity-80 transition group">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:shadow-blue-500/50 transition">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold text-white">FallGuard</span>
+                    </button>
+                    <button onclick="goToLiveFeed()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-6 py-2 rounded-lg font-semibold transition transform hover:scale-105 shadow-lg text-white">
+                        Sign In
+                    </button>
+                </div>
+            </nav>
 
-        <!-- Hero Section -->
-        <div class="bg-gradient-to-b from-gray-800 to-gray-900 py-20">
-            <div class="container mx-auto px-6">
-                <h2 class="text-5xl md:text-6xl font-bold mb-6">Peace of mind for your family</h2>
-                <p class="text-xl text-gray-300 max-w-2xl">Advanced AI-powered fall detection that keeps your loved ones safe, automatically.</p>
+            <!-- Hero Section with Text -->
+            <div class="relative py-32 px-6 overflow-hidden flex items-center min-h-screen">
+                <div class="container mx-auto px-6 relative z-10">
+                    <div class="max-w-3xl mx-auto text-center animate-fade-in">
+                        <h2 class="text-6xl md:text-7xl font-bold mb-6 drop-shadow-lg text-white">Peace of mind for your family</h2>
+                        <p class="text-xl md:text-2xl text-gray-100 max-w-2xl mx-auto drop-shadow-md font-light">Advanced AI-powered fall detection that keeps your loved ones safe, automatically.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- What We Offer Section -->
-        <div class="py-20 px-6">
+        <!-- What We Offer Section - Starts on white background -->
+        <div class="relative py-20 px-6 bg-white text-gray-900">
             <div class="container mx-auto">
-                <h3 class="text-4xl font-bold mb-16 text-center">What We Offer:</h3>
+                <h3 class="text-5xl font-bold mb-16 text-center text-gray-900">What We Offer</h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
                     <!-- Feature 1 -->
-                    <div class="bg-gray-800 rounded-xl p-8 hover:bg-gray-750 transition">
-                        <div class="text-5xl mb-6">⚡</div>
-                        <h4 class="text-2xl font-bold mb-4">Real-Time Detection</h4>
-                        <p class="text-gray-300 text-lg">
+                    <div class="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 transition transform hover:-translate-y-2 duration-300 hover:shadow-2xl hover:shadow-blue-500/20 shadow-lg">
+                        <div class="text-6xl mb-6 transform group-hover:scale-110 transition duration-300">⚡</div>
+                        <h4 class="text-2xl font-bold mb-4 text-gray-900">Real-Time Detection</h4>
+                        <p class="text-gray-700 text-lg leading-relaxed">
                             AI-powered fall detection system that can run smoothly and efficiently on your system with continuous monitoring.
                         </p>
                     </div>
 
                     <!-- Feature 2 -->
-                    <div class="bg-gray-800 rounded-xl p-8 hover:bg-gray-750 transition">
-                        <div class="text-5xl mb-6">🔔</div>
-                        <h4 class="text-2xl font-bold mb-4">Instant Alerts</h4>
-                        <p class="text-gray-300 text-lg">
+                    <div class="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 transition transform hover:-translate-y-2 duration-300 hover:shadow-2xl hover:shadow-blue-500/20 shadow-lg">
+                        <div class="text-6xl mb-6 transform group-hover:scale-110 transition duration-300">🔔</div>
+                        <h4 class="text-2xl font-bold mb-4 text-gray-900">Instant Alerts</h4>
+                        <p class="text-gray-700 text-lg leading-relaxed">
                             Get real-time notifications via Telegram when a fall is detected. Stay informed instantly with detailed video clips.
                         </p>
                     </div>
 
                     <!-- Feature 3 -->
-                    <div class="bg-gray-800 rounded-xl p-8 hover:bg-gray-750 transition">
-                        <div class="text-5xl mb-6">📊</div>
-                        <h4 class="text-2xl font-bold mb-4">Generate Reports</h4>
-                        <p class="text-gray-300 text-lg">
+                    <div class="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 transition transform hover:-translate-y-2 duration-300 hover:shadow-2xl hover:shadow-blue-500/20 shadow-lg">
+                        <div class="text-6xl mb-6 transform group-hover:scale-110 transition duration-300">📊</div>
+                        <h4 class="text-2xl font-bold mb-4 text-gray-900">Generate Reports</h4>
+                        <p class="text-gray-700 text-lg leading-relaxed">
                             Create detailed PDF reports of all incidents with timestamps, confidence scores, and action taken for records and analysis.
                         </p>
                     </div>
                 </div>
 
-                <!-- Key Benefits -->
-                <div class="bg-blue-600 rounded-xl p-12 mb-16">
-                    <h3 class="text-3xl font-bold mb-8">Why Choose FallGuard?</h3>
-                    <ul class="space-y-4 text-lg">
-                        <li class="flex items-center gap-4">
-                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                            <span>AI-powered accuracy with real-time detection</span>
-                        </li>
-                        <li class="flex items-center gap-4">
-                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                            <span>Multi-camera support for comprehensive coverage</span>
-                        </li>
-                        <li class="flex items-center gap-4">
-                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                            <span>Instant Telegram notifications for peace of mind</span>
-                        </li>
-                        <li class="flex items-center gap-4">
-                            <svg class="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                            <span>Comprehensive incident reporting and PDF exports</span>
-                        </li>
-                    </ul>
+                <!-- Key Benefits Section -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-12 mb-20 border border-blue-500/30 shadow-2xl text-white">
+                    <h3 class="text-4xl font-bold mb-12 text-center">Why Choose FallGuard?</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex items-start gap-4">
+                            <svg class="w-8 h-8 flex-shrink-0 text-green-300 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span class="text-lg font-medium">AI-powered accuracy with real-time detection</span>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <svg class="w-8 h-8 flex-shrink-0 text-green-300 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span class="text-lg font-medium">Multi-camera support for comprehensive coverage</span>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <svg class="w-8 h-8 flex-shrink-0 text-green-300 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span class="text-lg font-medium">Instant Telegram notifications for peace of mind</span>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <svg class="w-8 h-8 flex-shrink-0 text-green-300 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            <span class="text-lg font-medium">Comprehensive incident reporting and PDF exports</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- CTA Button -->
-                <div class="text-center">
-                    <button onclick="goToLiveFeed()" class="bg-blue-500 hover:bg-blue-600 px-12 py-4 rounded-lg font-bold text-xl transition transform hover:scale-105">
-                        Get Started Now
+                <div class="text-center mb-20">
+                    <button onclick="goToLiveFeed()" class="group relative inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 px-12 py-4 rounded-xl font-bold text-xl transition transform hover:scale-105 shadow-2xl hover:shadow-blue-500/50 duration-300 text-white">
+                        <span>Get Started Now</span>
+                        <svg class="w-6 h-6 group-hover:translate-x-2 transition duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -262,25 +270,28 @@
             </div>
             
             <!-- Camera Grid (Right) -->
-            <div class="bg-gray-800 rounded-xl p-4 overflow-y-auto shadow-xl">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-lg">All Cameras</h3>
-                    <button onclick="openCameraManager()" class="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition" title="Add Camera">
-                        <span class="text-xl">+</span>
+            <div class="bg-gradient-to-b from-gray-800 to-gray-900 rounded-xl p-5 overflow-hidden shadow-2xl border border-gray-700 flex flex-col h-full">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 class="font-bold text-lg text-white">All Cameras</h3>
+                        <p class="text-xs text-gray-400 mt-1">Select to view</p>
+                    </div>
+                    <button onclick="openCameraManager()" class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-full flex items-center justify-center transition transform hover:scale-110 shadow-lg" title="Add Camera">
+                        <span class="text-xl font-bold">+</span>
                     </button>
                 </div>
                 
-                <div id="camera-grid" class="video-grid">
+                <div id="camera-grid" class="video-grid flex-1 overflow-y-auto pr-2">
                     <!-- Camera thumbnails will be inserted here -->
                 </div>
                 
-                <div id="no-cameras" class="hidden text-center py-12 text-gray-500">
-                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div id="no-cameras" class="hidden text-center py-8 text-gray-400">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                     </svg>
-                    <p>No cameras available</p>
-                    <button onclick="openCameraManager()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition">
-                        Add Your First Camera
+                    <p class="text-sm font-medium">No cameras available</p>
+                    <button onclick="openCameraManager()" class="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm transition">
+                        Add Camera
                     </button>
                 </div>
             </div>
@@ -307,7 +318,7 @@
     </div>
     
     <!-- Admin Panel Modal -->
-    <div id="admin-panel-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div id="admin-panel-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-30 p-4">
         <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-gray-800 z-10">
                 <h2 class="text-2xl font-bold">Admin Panel</h2>
@@ -555,6 +566,40 @@
                         <p class="text-gray-500 text-sm text-center py-4">Loading subscribers...</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PDF Preview Modal -->
+    <div id="pdf-preview-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-700">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-700 flex items-center justify-between bg-gradient-to-b from-gray-800 to-gray-900">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Incident Report Preview</h2>
+                    <p class="text-blue-100 text-sm mt-1">📄 Review before downloading</p>
+                </div>
+                <button onclick="closePdfPreview()" class="text-white hover:text-gray-200 text-3xl leading-none">&times;</button>
+            </div>
+            
+            <!-- PDF Preview Area -->
+            <div class="flex-1 overflow-auto bg-gray-900 p-8">
+                <div id="pdf-preview-content" class="bg-white rounded-lg shadow-2xl max-w-2xl mx-auto p-12 text-gray-900" style="filter: grayscale(100%);">
+                    <!-- PDF content will be rendered here -->
+                </div>
+            </div>
+            
+            <!-- Footer with Actions -->
+            <div class="p-6 border-t border-gray-700 bg-gradient-to-b from-gray-800 to-gray-900 flex gap-3 justify-end">
+                <button onclick="closePdfPreview()" class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition">
+                    Close
+                </button>
+                <button onclick="downloadPdfFromPreview()" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg transition transform hover:scale-105 shadow-lg flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Download PDF
+                </button>
             </div>
         </div>
     </div>
@@ -1938,13 +1983,14 @@
                     </div>
                     
                     <div class="flex gap-2">
-                        <button onclick="generateIncidentPDF('${incident.id}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded transition">
-                            📄 PDF Report
+                        <button onclick="previewIncidentPDF('${incident.id}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded-lg transition font-medium flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            📄 View Report
                         </button>
-                        <button onclick="editIncidentNotes('${incident.id}')" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm py-2 rounded transition">
+                        <button onclick="editIncidentNotes('${incident.id}')" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm py-2 rounded-lg transition font-medium">
                             📝 Notes
                         </button>
-                        <button onclick="deleteIncident('${incident.id}')" class="px-3 bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded transition">
+                        <button onclick="deleteIncident('${incident.id}')" class="px-3 bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded-lg transition font-medium">
                             🗑️
                         </button>
                     </div>
@@ -1961,9 +2007,150 @@
         }
     }
 
-    async function generateIncidentPDF(incidentId) {
+    // Store current PDF data for download
+    let currentPdfData = null;
+    let currentPdfIncidentId = null;
+
+    async function previewIncidentPDF(incidentId) {
         try {
-            const response = await fetch(`/api/incidents/${incidentId}/pdf`, {
+            // Fetch incident details
+            const incidentResponse = await apiCall(`/incidents/${incidentId}`);
+            const incident = incidentResponse.incident || {};
+            
+            // Generate formatted HTML preview
+            const previewHTML = `
+                <div class="space-y-6">
+                    <!-- Header -->
+                    <div class="border-b-4 border-blue-600 pb-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900">Incident Report</h1>
+                                <p class="text-gray-600 mt-1">Official Fall Detection Alert</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-2xl font-bold text-blue-600">ID: ${incident.id || 'N/A'}</p>
+                                <p class="text-sm text-gray-600">Report Number</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Section -->
+                    <div class="grid grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wide mb-3">Incident Details</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Date & Time</p>
+                                    <p class="font-semibold text-gray-900">${incident.timestamp || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Location</p>
+                                    <p class="font-semibold text-gray-900">${escapeHtml(incident.location || 'Unknown')}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Camera</p>
+                                    <p class="font-semibold text-gray-900">${escapeHtml(incident.camera || 'N/A')}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wide mb-3">Detection Data</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Confidence Score</p>
+                                    <div class="flex items-center gap-3">
+                                        <p class="text-3xl font-bold text-blue-600">${(incident.confidence * 100).toFixed(1)}%</p>
+                                        <div class="flex-1 h-3 bg-gray-300 rounded-full overflow-hidden">
+                                            <div class="h-full bg-gradient-to-r from-green-500 to-blue-600" style="width: ${incident.confidence * 100}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase">Severity</p>
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm font-bold ${
+                                        incident.severity === 'HIGH' ? 'bg-red-100 text-red-700' :
+                                        incident.severity === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-green-100 text-green-700'
+                                    }">${incident.severity || 'MEDIUM'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="border-l-4 border-blue-600 pl-6 py-4 bg-blue-50 rounded">
+                        <h3 class="font-bold text-gray-900 mb-2">Incident Summary</h3>
+                        <p class="text-gray-700 leading-relaxed">
+                            A fall has been detected by the AI monitoring system with a confidence score of ${(incident.confidence * 100).toFixed(1)}%.
+                            The system has flagged this incident at the ${escapeHtml(incident.location || 'specified location')} on ${incident.timestamp || 'the specified date'}.
+                        </p>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    <div>
+                        <h3 class="font-bold text-gray-900 mb-3">Recommended Actions</h3>
+                        <ul class="space-y-2">
+                            <li class="flex gap-3">
+                                <span class="text-blue-600 font-bold">✓</span>
+                                <span class="text-gray-700">Review the incident footage</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="text-blue-600 font-bold">✓</span>
+                                <span class="text-gray-700">Contact the individual if necessary</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="text-blue-600 font-bold">✓</span>
+                                <span class="text-gray-700">Document any actions taken</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="text-blue-600 font-bold">✓</span>
+                                <span class="text-gray-700">Adjust monitoring parameters if needed</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Notes Section -->
+                    ${incident.notes ? `
+                        <div class="border-t-2 border-gray-300 pt-6">
+                            <h3 class="font-bold text-gray-900 mb-3">Additional Notes</h3>
+                            <p class="text-gray-700 bg-gray-100 p-4 rounded">${escapeHtml(incident.notes)}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Footer -->
+                    <div class="border-t-2 border-gray-300 pt-6 mt-8 text-center text-gray-600 text-sm">
+                        <p>FallGuard Incident Management System</p>
+                        <p class="text-xs mt-1">Generated: ${new Date().toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('pdf-preview-content').innerHTML = previewHTML;
+            currentPdfData = incident;
+            currentPdfIncidentId = incidentId;
+            document.getElementById('pdf-preview-modal').classList.remove('hidden');
+            showToast('Report loaded for preview');
+        } catch (error) {
+            showToast('Failed to load report: ' + error.message, 'error');
+            console.error('Error loading incident:', error);
+        }
+    }
+
+    function closePdfPreview() {
+        document.getElementById('pdf-preview-modal').classList.add('hidden');
+        currentPdfData = null;
+        currentPdfIncidentId = null;
+    }
+
+    async function downloadPdfFromPreview() {
+        if (!currentPdfIncidentId) {
+            showToast('No report selected', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/incidents/${currentPdfIncidentId}/pdf`, {
                 headers: {
                     'Accept': 'application/pdf'
                 }
@@ -1975,17 +2162,23 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `incident_${incidentId}.pdf`;
+                a.download = `FallGuard_Report_${currentPdfIncidentId}_${new Date().getTime()}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                showToast('PDF report downloaded');
+                showToast('✅ PDF report downloaded successfully');
+                closePdfPreview();
             } else {
                 showToast('Failed to generate PDF', 'error');
             }
         } catch (error) {
-            showToast('Error generating PDF', 'error');
+            showToast('Error downloading PDF: ' + error.message, 'error');
         }
+    }
+
+    async function generateIncidentPDF(incidentId) {
+        // Legacy function - redirects to preview
+        previewIncidentPDF(incidentId);
     }
 
     function editIncidentNotes(incidentId) {

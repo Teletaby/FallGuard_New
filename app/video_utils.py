@@ -2,248 +2,282 @@ import cv2
 import numpy as np
 import math
 import torch
-import torch.nn.functional as F
-import mediapipe as mp 
+from ultralytics import YOLO
+import os
 
-# Import constants to ensure input sequence shapes match the model
+# Import constants
 from app.skeleton_lstm import FEATURE_SIZE, SEQUENCE_LENGTH 
 
-# --- Multi-Person Detection Support ---
-def detect_multiple_people(image, mp_pose_instance, use_hog=False):
-    """
-    Detects multiple people in the frame using MediaPipe Pose (primary method).
-    HOG is disabled by default for performance - uses pure MediaPipe multi-detection.
+# Load YOLOv11n-Pose model globally
+try:
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_paths = [
+        os.path.join(project_root, 'yolo11n-pose.pt'),
+        'yolo11n-pose.pt',
+        os.path.join('..', 'yolo11n-pose.pt'),
+    ]
     
-    Args:
-        image: Input frame
-        mp_pose_instance: MediaPipe Pose instance
-        use_hog: Whether to use HOG (disabled for performance)
+    model_loaded = False
+    for model_path in model_paths:
+        if os.path.exists(model_path):
+            YOLO_MODEL = YOLO(model_path)
+            YOLO_MODEL.to('cpu')
+            print(f"[SUCCESS] YOLOv11n-Pose model loaded from: {os.path.abspath(model_path)}")
+            model_loaded = True
+            break
     
-    Returns list of person objects with landmarks and bounding boxes, sorted by area.
+    if not model_loaded:
+        YOLO_MODEL = YOLO('yolo11n-pose.pt')
+        YOLO_MODEL.to('cpu')
+        print("[SUCCESS] YOLOv11n-Pose model loaded")
+except Exception as e:
+    print(f"[ERROR] YOLOv11n-Pose failed to load: {e}")
+    YOLO_MODEL = None
+
+# YOLOv11 Pose keypoint connections (17 keypoints)
+YOLOV11_SKELETON = [
+    [0, 1], [0, 2],  # nose to eyes
+    [1, 3], [2, 4],  # eyes to ears
+    [5, 6],  # shoulders
+    [5, 7], [7, 9],  # left arm
+    [6, 8], [8, 10],  # right arm
+    [5, 11], [6, 12],  # shoulders to hips
+    [11, 12],  # hips
+    [11, 13], [13, 15],  # left leg
+    [12, 14], [14, 16],  # right leg
+]
+
+def detect_multiple_people(image, mp_pose_instance=None, use_hog=False):
     """
-    mp_pose = mp.solutions.pose
-    people = []
+    Fast detection using YOLOv11n-Pose only.
+    Returns list of people with keypoints and bounding boxes.
+    """
     h, w, _ = image.shape
     
-    if h < 100 or w < 100:  # Skip if image too small
-        return people
-    
-    detected_regions = set()  # Track regions to avoid duplicate detections
+    if h < 100 or w < 100 or YOLO_MODEL is None:
+        return []
     
     try:
-        # ONLY use MediaPipe full-frame detection (no HOG for performance)
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image.flags.writeable = False
-        full_results = mp_pose_instance.process(image_rgb)
-        image.flags.writeable = True
+        # Single fast detection - optimized for speed
+        results = YOLO_MODEL(image, conf=0.30, iou=0.50, verbose=False, half=False)
         
-        if full_results and full_results.pose_landmarks:
-            visible_landmarks = [lm for lm in full_results.pose_landmarks.landmark if lm.visibility > 0.01]
+        people = []
+        if results and len(results) > 0:
+            result = results[0]
             
-            if len(visible_landmarks) >= 1:
-                x_coords = [lm.x * w for lm in visible_landmarks]
-                y_coords = [lm.y * h for lm in visible_landmarks]
-                
-                min_x, max_x = min(x_coords), max(x_coords)
-                min_y, max_y = min(y_coords), max(y_coords)
-                
-                # Add padding
-                pad_x = (max_x - min_x) * 0.10 if (max_x - min_x) > 0 else w * 0.02
-                pad_y = (max_y - min_y) * 0.10 if (max_y - min_y) > 0 else h * 0.02
-                
-                bx = max(0, int(min_x - pad_x))
-                by = max(0, int(min_y - pad_y))
-                bw = min(w - bx, int(max_x - min_x + 2 * pad_x))
-                bh = min(h - by, int(max_y - min_y + 2 * pad_y))
-                
-                if bw > 15 and bh > 25:
-                    detected_regions.add((bx, by, bw, bh))
-                    conf = float(np.mean([lm.visibility for lm in visible_landmarks]))
-                    people.append({
-                        'landmarks': full_results.pose_landmarks,
-                        'bbox': (bx, by, bw, bh),
-                        'x': bx + bw / 2,
-                        'y': by + bh / 2,
-                        'area': bw * bh,
-                        'confidence': conf
-                    })
-                    print(f"[DETECTION] Found person #{len(people)} at ({bx}, {by}) size={bw}x{bh}, conf={conf:.2f}")
+            if result.boxes is not None and result.keypoints is not None:
+                for person_idx in range(len(result.boxes)):
+                    try:
+                        box = result.boxes[person_idx]
+                        kpts = result.keypoints.data[person_idx]
+                        conf = float(box.conf) if hasattr(box, 'conf') else 0.5
+                        
+                        # Extract valid keypoints
+                        valid_keypoints = []
+                        for kpt in kpts:
+                            if len(kpt) >= 3:
+                                x, y, conf_kpt = float(kpt[0]), float(kpt[1]), float(kpt[2])
+                                if conf_kpt > 0.3 and (0 <= x < w) and (0 <= y < h):
+                                    valid_keypoints.append([x, y, conf_kpt])
+                        
+                        # Need at least 5 keypoints
+                        if len(valid_keypoints) >= 5:
+                            keypoint_array = np.array(valid_keypoints)
+                            x_coords = keypoint_array[:, 0]
+                            y_coords = keypoint_array[:, 1]
+                            
+                            min_x, max_x = int(np.min(x_coords)), int(np.max(x_coords))
+                            min_y, max_y = int(np.min(y_coords)), int(np.max(y_coords))
+                            
+                            width = max_x - min_x
+                            height = max_y - min_y
+                            
+                            if width > 20 and height > 30:
+                                # Store raw keypoints for drawing
+                                people.append({
+                                    'keypoints': kpts.cpu().numpy() if hasattr(kpts, 'cpu') else np.array(kpts),
+                                    'bbox': (min_x, min_y, width, height),
+                                    'x': (min_x + max_x) / 2,
+                                    'y': (min_y + max_y) / 2,
+                                    'area': width * height,
+                                    'confidence': conf,
+                                })
+                    except Exception as e:
+                        continue
         
-        # Sort by area (largest first)
+        # Sort by area
         people.sort(key=lambda p: p['area'], reverse=True)
+        return people
         
     except Exception as e:
-        print(f"[ERROR] Multi-person detection failed: {e}")
-        pass
+        print(f"[ERROR] YOLOv11 detection failed: {e}")
+        return []
 
-    return people
-
-# --- Visualization ---
-def draw_skeleton(image, results, is_fall_confirmed):
-    """Draws the MediaPipe skeleton and connections on the image."""
+def draw_skeleton_yolo(image, keypoints, color=(0, 255, 0), thickness=2):
+    """Draw skeleton directly from YOLOv11 keypoints using OpenCV"""
+    if keypoints is None or len(keypoints) == 0:
+        return image
     
-    if results.pose_landmarks:
-        mp_drawing = mp.solutions.drawing_utils
-        
-        # Change color to red if fall confirmed
-        line_color = (0, 0, 255) if is_fall_confirmed else (255, 0, 0)
-        point_color = (0, 255, 255) if is_fall_confirmed else (0, 255, 0)
-
-        # Draw the pose landmarks and connections
-        mp_drawing.draw_landmarks(
-            image,
-            results.pose_landmarks,
-            mp.solutions.pose.POSE_CONNECTIONS,
-            landmark_drawing_spec=mp_drawing.DrawingSpec(color=point_color, thickness=2, circle_radius=2),
-            connection_drawing_spec=mp_drawing.DrawingSpec(color=line_color, thickness=2)
-        )
+    h, w = image.shape[:2]
+    
+    # Convert keypoints to numpy if needed
+    if hasattr(keypoints, 'cpu'):
+        kpts = keypoints.cpu().numpy()
+    else:
+        kpts = np.array(keypoints)
+    
+    # Draw connections
+    for connection in YOLOV11_SKELETON:
+        if len(connection) == 2:
+            idx1, idx2 = connection
+            if idx1 < len(kpts) and idx2 < len(kpts):
+                pt1 = kpts[idx1]
+                pt2 = kpts[idx2]
+                
+                if len(pt1) >= 3 and len(pt2) >= 3:
+                    x1, y1, conf1 = float(pt1[0]), float(pt1[1]), float(pt1[2])
+                    x2, y2, conf2 = float(pt2[0]), float(pt2[1]), float(pt2[2])
+                    
+                    if conf1 > 0.3 and conf2 > 0.3 and (0 <= x1 < w) and (0 <= y1 < h) and (0 <= x2 < w) and (0 <= y2 < h):
+                        cv2.line(image, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness)
+    
+    # Draw keypoints
+    for kpt in kpts:
+        if len(kpt) >= 3:
+            x, y, conf = float(kpt[0]), float(kpt[1]), float(kpt[2])
+            if conf > 0.3 and (0 <= x < w) and (0 <= y < h):
+                cv2.circle(image, (int(x), int(y)), 4, color, -1)
+    
     return image
 
-
-# --- Feature Extraction Helpers ---
-def calculate_distance(p1, p2):
-    """Calculates the Euclidean distance between two points."""
-    return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
-
-def extract_8_kinematic_features(landmarks):
+def extract_8_kinematic_features(keypoints, frame_width=640, frame_height=480):
     """
-    Calculates the 8 kinematic features (HWR, TorsoAngle, D, H, FallAngleD, 
-    and mock values for P40, HipVx, HipVy).
+    Extract features directly from YOLOv11 keypoints.
+    Returns 8-feature vector: [HWR, TorsoAngle, D, P40, HipVx, H, FallAngleD, HipVy]
     """
-    mp_pose = mp.solutions.pose
+    if keypoints is None or len(keypoints) == 0:
+        return np.zeros(8, dtype=np.float32)
     
-    if not landmarks or not landmarks.landmark:
-        # Return a zero vector of 8 elements if no landmarks are found
+    try:
+        # Convert to numpy
+        if hasattr(keypoints, 'cpu'):
+            kpts = keypoints.cpu().numpy()
+        else:
+            kpts = np.array(keypoints)
+        
+        # Get key body parts (YOLOv11 indices)
+        # 0: nose, 5: left_shoulder, 6: right_shoulder, 11: left_hip, 12: right_hip
+        nose_idx, l_shoulder_idx, r_shoulder_idx = 0, 5, 6
+        l_hip_idx, r_hip_idx = 11, 12
+        
+        def get_point(idx):
+            if idx < len(kpts) and len(kpts[idx]) >= 3:
+                conf = float(kpts[idx][2])
+                if conf > 0.3:
+                    return float(kpts[idx][0]) / frame_width, float(kpts[idx][1]) / frame_height
+            return None, None
+        
+        nose_x, nose_y = get_point(nose_idx)
+        l_shoulder_x, l_shoulder_y = get_point(l_shoulder_idx)
+        r_shoulder_x, r_shoulder_y = get_point(r_shoulder_idx)
+        l_hip_x, l_hip_y = get_point(l_hip_idx)
+        r_hip_x, r_hip_y = get_point(r_hip_idx)
+        
+        # Need at least shoulders and hips
+        if l_shoulder_x is None or r_shoulder_x is None or l_hip_x is None or r_hip_x is None:
+            return np.zeros(8, dtype=np.float32)
+        
+        # Calculate centers
+        shoulder_center_x = (l_shoulder_x + r_shoulder_x) / 2
+        shoulder_center_y = (l_shoulder_y + r_shoulder_y) / 2
+        hip_center_x = (l_hip_x + r_hip_x) / 2
+        hip_center_y = (l_hip_y + r_hip_y) / 2
+        
+        # Get all visible keypoints for bounding box
+        visible_x = []
+        visible_y = []
+        for kpt in kpts:
+            if len(kpt) >= 3 and float(kpt[2]) > 0.3:
+                visible_x.append(float(kpt[0]) / frame_width)
+                visible_y.append(float(kpt[1]) / frame_height)
+        
+        if len(visible_x) < 5:
+            return np.zeros(8, dtype=np.float32)
+        
+        min_x, max_x = min(visible_x), max(visible_x)
+        min_y, max_y = min(visible_y), max(visible_y)
+        
+        # 0. HWR (Height-to-Width Ratio)
+        W = max_x - min_x
+        H = max_y - min_y
+        HWR = H / W if W > 0 else 0.0
+        
+        # 1. Torso Angle (from vertical)
+        torso_x_diff = hip_center_x - shoulder_center_x
+        torso_y_diff = shoulder_center_y - hip_center_y
+        TorsoAngle = np.degrees(np.arctan2(abs(torso_x_diff), abs(torso_y_diff))) if torso_y_diff != 0 else 0.0
+        
+        # 2. D (Head to hip vertical distance)
+        D = nose_y - hip_center_y if nose_y is not None else 0.0
+        
+        # 3-4. P40, HipVx, HipVy (velocity - set to 0)
+        P40 = 0.0
+        HipVx = 0.0
+        HipVy = 0.0
+        
+        # 5. H (Hip height in frame)
+        H_norm = hip_center_y
+        
+        # 6. Fall Angle D (Body angle from horizontal)
+        FallAngleD = abs(90.0 - TorsoAngle)
+        
+        return np.array([HWR, TorsoAngle, D, P40, HipVx, H_norm, FallAngleD, HipVy], dtype=np.float32)
+        
+    except Exception as e:
         return np.zeros(8, dtype=np.float32)
 
-    # MediaPipe Landmark Points
-    L_SHOULDER = landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER.value]
-    R_SHOULDER = landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
-    L_HIP = landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP.value]
-    R_HIP = landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP.value]
-    NOSE = landmarks.landmark[mp_pose.PoseLandmark.NOSE.value]
-
-    # --- 0. HWR (Height-to-Width Ratio of Bounding Box) ---
-    x_coords = [lm.x for lm in landmarks.landmark if lm.visibility > 0.5]
-    y_coords = [lm.y for lm in landmarks.landmark if lm.visibility > 0.5]
-    
-    if not x_coords or not y_coords:
-        return np.zeros(8, dtype=np.float32)
-
-    min_x, max_x = min(x_coords), max(x_coords)
-    min_y, max_y = min(y_coords), max(y_coords)
-
-    W = max_x - min_x
-    H = max_y - min_y
-    HWR = H / W if W > 0 else 0.0
-
-    # --- 1. Torso Angle (Angle of the main body axis to the vertical) ---
-    shoulder_center_x = (L_SHOULDER.x + R_SHOULDER.x) / 2
-    shoulder_center_y = (L_SHOULDER.y + R_SHOULDER.y) / 2
-    hip_center_x = (L_HIP.x + R_HIP.x) / 2
-    hip_center_y = (L_HIP.y + R_HIP.y) / 2
-    
-    torso_x_diff = hip_center_x - shoulder_center_x
-    torso_y_diff = shoulder_center_y - hip_center_y # Vertical difference
-    
-    # Angle relative to vertical axis (0 degrees is perfectly upright)
-    TorsoAngle = np.degrees(np.arctan2(abs(torso_x_diff), abs(torso_y_diff))) if torso_y_diff != 0 else 0.0
-
-    # --- 2. D (Difference in y-coordinates of head and hip centers) ---
-    D = NOSE.y - hip_center_y
-
-    # --- 3. P40 (Average joint velocity) & 4. Hip Vx & 7. Hip Vy --- 
-    # These velocity/sequence features are set to 0.0 here as they require sequential data
-    P40 = 0.0 
-    HipVx = 0.0 
-    HipVy = 0.0 
-    
-    # --- 5. Height of Hip Center (H) ---
-    # Normalized height relative to the frame (0.0 is ceiling, 1.0 is floor)
-    H = hip_center_y 
-
-    # --- 6. Fall Angle D (Angle of body to horizontal, 90 degrees is vertical) ---
-    # Using the same angle calculation as Torso Angle, but relative to horizontal
-    FallAngleD = abs(90.0 - TorsoAngle)
-
-    # Create the 8-feature vector
-    features_8 = np.array([HWR, TorsoAngle, D, P40, HipVx, H, FallAngleD, HipVy], dtype=np.float32)
-
-    return features_8
-
-def extract_55_features(image, mp_pose_instance):
-    """
-    Runs MediaPipe, calculates the 8 kinematic features, and pads the result to 55 features.
-    """
-    mp_pose = mp.solutions.pose
-    
-    image.flags.writeable = False
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    results = mp_pose_instance.process(image_rgb)
-    image.flags.writeable = True
-    
-    bbox = None
+def extract_55_features(image, mp_pose_instance=None):
+    """Extract 55 features using YOLOv11-Pose"""
     feature_vec_55 = np.zeros(FEATURE_SIZE, dtype=np.float32)
+    bbox = None
     
-    if results.pose_landmarks:
-        landmarks = results.pose_landmarks
+    try:
+        people = detect_multiple_people(image, mp_pose_instance)
         
-        # 1. Calculate the 8 kinematic features
-        features_8 = extract_8_kinematic_features(landmarks)
+        if not people:
+            return feature_vec_55, bbox
         
-        # 2. Pad to 55 features (to match the model's expected input size)
+        # Use the largest person
+        person = people[0]
+        keypoints = person['keypoints']
+        bbox = person['bbox']
+        
+        # Extract 8 kinematic features
+        features_8 = extract_8_kinematic_features(keypoints, image.shape[1], image.shape[0])
+        
+        # Pad to 55 features
         feature_vec_55[:8] = features_8
         
-        # 3. Calculate Bounding Box (for visualization)
-        h, w, _ = image.shape
-        x_coords = [lm.x * w for lm in landmarks.landmark if lm.visibility > 0.5]
-        y_coords = [lm.y * h for lm in landmarks.landmark if lm.visibility > 0.5]
-        
-        if x_coords and y_coords:
-            min_x, max_x = min(x_coords), max(x_coords)
-            min_y, max_y = min(y_coords), max(y_coords)
-            
-            x = int(min_x)
-            y = int(min_y)
-            bw = int(max_x - min_x)
-            bh = int(max_y - min_y)
-            bbox = (x, y, bw, bh)
-        
-    return bbox, feature_vec_55, results
-
-# --- Prediction Utility (CRITICAL FIX APPLIED HERE) ---
-def predict_torch(model, sequence_tensor, threshold=0.5):
-    """
-    Runs inference on the PyTorch model for a single sequence.
+        return feature_vec_55, bbox
     
-    Args:
-        model (LSTMModel): The loaded PyTorch model.
-        sequence_tensor (torch.Tensor): Input tensor of shape (1, SEQUENCE_LENGTH, FEATURE_SIZE).
-        threshold (float): Probability threshold for fall classification.
-        
-    Returns:
-        tuple: (prediction_class, probability_of_fall)
-    """
-    if model is None:
-        return 0, 0.0
-        
-    try:
-        with torch.no_grad():
-            # Get the raw logits from the model (output shape: (1, 2))
-            logits = model(sequence_tensor)
-            
-            # CRITICAL FIX: Apply Softmax to convert raw logits into probabilities
-            # The model is outputting 2 classes, so Softmax is required.
-            probs = F.softmax(logits, dim=1) 
-            
-            # Get the probability of a fall (which is class index 1)
-            prob_fall = probs[0, 1].item()
-            
-            # Classify based on the threshold
-            prediction = 1 if prob_fall >= threshold else 0
-            
-            return prediction, prob_fall
-            
     except Exception as e:
-        print(f"Error during torch prediction: {e}")
-        return 0, 0.0
+        return feature_vec_55, bbox
+
+def predict_torch(model, input_tensor, threshold=0.75):
+    """Run LSTM inference"""
+    if model is None:
+        return False, 0.0
+    
+    try:
+        output = model(input_tensor)
+        
+        if len(output.shape) > 1:
+            prob = float(output[0, 0])
+        else:
+            prob = float(output[0])
+        
+        prob = max(0.0, min(1.0, prob))
+        return prob >= threshold, prob
+    
+    except Exception as e:
+        return False, 0.0
