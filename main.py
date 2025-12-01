@@ -1139,8 +1139,19 @@ class CameraProcessor(threading.Thread):
                     else:
                         self.update_camera_status("No People Detected", "gray", is_live=True, person_count=0)
                 
+                # Apply privacy mode to frame before skeleton drawing for certain modes
+                privacy_mode = GLOBAL_SETTINGS.get('privacy_mode', 'full_video')
+                
                 # Draw frame with skeleton overlay only (no bounding boxes)
-                processed = frame.copy()
+                # For skeleton_only and alerts_only, start with black frame so skeleton shows clearly
+                if privacy_mode == "skeleton_only":
+                    processed = np.zeros_like(frame)  # Black frame for skeleton only
+                elif privacy_mode == "alerts_only":
+                    processed = np.zeros_like(frame)  # Black frame for alerts only (no skeleton drawn)
+                elif privacy_mode == "blurred":
+                    processed = cv2.GaussianBlur(frame, (51, 51), 30)  # Blur before skeleton
+                else:  # full_video
+                    processed = frame.copy()
                 
                 # Color palette for different people
                 person_colors = [
@@ -1154,44 +1165,45 @@ class CameraProcessor(threading.Thread):
                     (0, 128, 255),    # Red-Orange
                 ]
                 
-                # Draw skeleton for ALL detected people (not just tracked) - ensures all visible people get skeletons
-                for person_idx, person in enumerate(people):
-                    person_keypoints = person.get('keypoints')
-                    if person_keypoints is not None:
-                        # Find person_id if tracked
-                        person_id = None
-                        person_bbox = person['bbox']
-                        for pid, tracker in self.people_trackers.items():
-                            tracker_bbox = tracker.get('bbox', (0, 0, 0, 0))
-                            # Simple IoU check
-                            x1, y1, w1, h1 = person_bbox
-                            x2, y2, w2, h2 = tracker_bbox
-                            xi1, yi1 = max(x1, x2), max(y1, y2)
-                            xi2, yi2 = min(x1+w1, x2+w2), min(y1+h1, y2+h2)
-                            if xi2 > xi1 and yi2 > yi1:
-                                intersection = (xi2 - xi1) * (yi2 - yi1)
-                                area1, area2 = w1*h1, w2*h2
-                                union = area1 + area2 - intersection
-                                if union > 0 and intersection / union > 0.5:
-                                    person_id = pid
-                                    break
-                        
-                        person_falling = False
-                        if person_id and hasattr(self, 'person_fall_states') and person_id in self.person_fall_states:
-                            person_falling = self.person_fall_states[person_id]['frames'] >= 7
-                        
-                        # Get color for this person
-                        color_idx = person_idx % len(person_colors)
-                        person_color = person_colors[color_idx]
-                        
-                        # Choose color based on fall status
-                        if person_falling:
-                            color = (0, 0, 255)  # Red for falling
-                        else:
-                            color = person_color  # Use assigned color
-                        
-                        # Draw skeleton directly from YOLOv11 keypoints
-                        draw_skeleton_yolo(processed, person_keypoints, color=color, thickness=2)
+                # Draw skeleton for ALL detected people (only if not in alerts_only mode)
+                if privacy_mode != "alerts_only":
+                    for person_idx, person in enumerate(people):
+                        person_keypoints = person.get('keypoints')
+                        if person_keypoints is not None:
+                            # Find person_id if tracked
+                            person_id = None
+                            person_bbox = person['bbox']
+                            for pid, tracker in self.people_trackers.items():
+                                tracker_bbox = tracker.get('bbox', (0, 0, 0, 0))
+                                # Simple IoU check
+                                x1, y1, w1, h1 = person_bbox
+                                x2, y2, w2, h2 = tracker_bbox
+                                xi1, yi1 = max(x1, x2), max(y1, y2)
+                                xi2, yi2 = min(x1+w1, x2+w2), min(y1+h1, y2+h2)
+                                if xi2 > xi1 and yi2 > yi1:
+                                    intersection = (xi2 - xi1) * (yi2 - yi1)
+                                    area1, area2 = w1*h1, w2*h2
+                                    union = area1 + area2 - intersection
+                                    if union > 0 and intersection / union > 0.5:
+                                        person_id = pid
+                                        break
+                            
+                            person_falling = False
+                            if person_id and hasattr(self, 'person_fall_states') and person_id in self.person_fall_states:
+                                person_falling = self.person_fall_states[person_id]['frames'] >= 7
+                            
+                            # Get color for this person
+                            color_idx = person_idx % len(person_colors)
+                            person_color = person_colors[color_idx]
+                            
+                            # Choose color based on fall status
+                            if person_falling:
+                                color = (0, 0, 255)  # Red for falling
+                            else:
+                                color = person_color  # Use assigned color
+                            
+                            # Draw skeleton directly from YOLOv11 keypoints
+                            draw_skeleton_yolo(processed, person_keypoints, color=color, thickness=2)
 
                 with shared_frames[self.camera_id]["lock"]:
                     shared_frames[self.camera_id]["frame"] = processed
@@ -1454,12 +1466,18 @@ def api_admin_check():
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def api_settings():
-    if not session.get('admin_authenticated', False):
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    # GET requests are allowed without authentication (for loading current settings)
+    # POST requests still require authentication for most settings, but privacy settings are allowed
     
     if request.method == 'POST':
         data = request.get_json() or {}
         message = []
+        
+        # Check if user is trying to modify sensitive settings (requires auth)
+        has_sensitive_changes = any(key in data for key in ['fall_threshold', 'fall_delay_seconds', 'alert_cooldown_seconds'])
+        
+        if has_sensitive_changes and not session.get('admin_authenticated', False):
+            return jsonify({"success": False, "message": "Authentication required for these settings"}), 401
         
         new_threshold = data.get('fall_threshold')
         if new_threshold is not None:
@@ -1522,7 +1540,7 @@ def api_settings():
             except ValueError:
                 return jsonify({"success": False, "message": "Invalid buffer value"}), 400
 
-        return jsonify({"success": True, "message": " ".join(message), "settings": GLOBAL_SETTINGS})
+        return jsonify({"success": True, "message": " ".join(message) if message else "No changes", "settings": GLOBAL_SETTINGS})
     
     response_data = {"success": True, "settings": GLOBAL_SETTINGS}
     
@@ -1930,6 +1948,12 @@ def api_get_incident(incident_id):
     incident = next((inc for inc in INCIDENT_REPORTS if inc['id'] == incident_id), None)
     if not incident:
         return jsonify({"success": False, "message": "Incident not found"}), 404
+    
+    # Ensure required fields for PDF preview
+    if 'camera' not in incident:
+        incident['camera'] = incident.get('camera_name', 'Unknown')
+    if 'location' not in incident:
+        incident['location'] = incident.get('camera_name', 'Unknown')
     
     return jsonify({"success": True, "incident": incident})
 

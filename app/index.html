@@ -347,6 +347,12 @@
                             <p class="text-xs text-gray-500 mt-1">Continuous detection time before alert</p>
                         </div>
                         
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Alert Cooldown (seconds)</label>
+                            <input type="number" id="alert-cooldown-seconds" min="0" max="300" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" value="60">
+                            <p class="text-xs text-gray-500 mt-1">Time between duplicate alerts (0-300 seconds)</p>
+                        </div>
+                        
                         <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">
                             Save Settings
                         </button>
@@ -1201,19 +1207,32 @@
             
             if (isAuth) {
                 modal.classList.remove('hidden');
-                // Load all data after modal is visible
-                await Promise.all([
-                    loadSettings().catch(err => console.error('Failed to load settings:', err)),
-                    loadTelegramStatus().catch(err => console.error('Failed to load telegram:', err)),
-                    loadAdminSubscribersList().catch(err => console.error('Failed to load subscribers:', err)),
-                    loadAdminBlockedList().catch(err => console.error('Failed to load blocked:', err)),
-                    loadCameraStatusList().catch(err => console.error('Failed to load cameras:', err)),
-                    loadPrivacySettings().catch(err => console.error('Failed to load privacy:', err)),
-                    loadIncidents().catch(err => console.error('Failed to load incidents:', err))
-                ]);
+                
+                // Load all data with individual error handling
+                const loads = [
+                    { fn: loadSettings, name: 'Settings' },
+                    { fn: loadTelegramStatus, name: 'Telegram Status' },
+                    { fn: loadAdminSubscribersList, name: 'Subscribers' },
+                    { fn: loadAdminBlockedList, name: 'Blocked Users' },
+                    { fn: loadCameraStatusList, name: 'Cameras' },
+                    { fn: loadPrivacySettings, name: 'Privacy Settings' },
+                    { fn: loadIncidents, name: 'Incidents' }
+                ];
+                
+                for (const load of loads) {
+                    try {
+                        await load.fn();
+                        console.log(`[ADMIN] Loaded: ${load.name}`);
+                    } catch (err) {
+                        console.warn(`[ADMIN] Failed to load ${load.name}:`, err.message);
+                    }
+                }
             } else {
                 openAdminLogin();
             }
+        } catch (error) {
+            console.error('[ADMIN] Panel open failed:', error);
+            showToast('Failed to open admin panel', 'error');
         } finally {
             adminPanelLoading = false;
         }
@@ -1268,10 +1287,19 @@
         try {
             const data = await apiCall('/settings');
             state.settings = data.settings;
-            document.getElementById('fall-threshold').value = data.settings.fall_threshold;
-            document.getElementById('fall-delay').value = data.settings.fall_delay_seconds;
+            if (document.getElementById('fall-threshold')) {
+                document.getElementById('fall-threshold').value = data.settings.fall_threshold || 0.75;
+            }
+            if (document.getElementById('fall-delay')) {
+                document.getElementById('fall-delay').value = data.settings.fall_delay_seconds || 2;
+            }
+            if (document.getElementById('alert-cooldown-seconds')) {
+                document.getElementById('alert-cooldown-seconds').value = data.settings.alert_cooldown_seconds || 60;
+            }
+            console.log('[SETTINGS] Loaded successfully:', data.settings);
         } catch (error) {
             console.error('Failed to load settings:', error);
+            showToast('Failed to load settings', 'error');
         }
     }
 
@@ -1282,7 +1310,8 @@
                 method: 'POST',
                 body: JSON.stringify({
                     fall_threshold: parseFloat(document.getElementById('fall-threshold').value),
-                    fall_delay_seconds: parseInt(document.getElementById('fall-delay').value)
+                    fall_delay_seconds: parseInt(document.getElementById('fall-delay').value),
+                    alert_cooldown_seconds: parseInt(document.getElementById('alert-cooldown-seconds').value || '60')
                 })
             });
             showToast('Settings saved successfully');
@@ -1326,18 +1355,26 @@
             const testBtn = document.getElementById('test-alert-btn');
             const tokenInput = document.getElementById('telegram-token');
             
+            if (!statusDiv || !testBtn || !tokenInput) {
+                console.warn('[TELEGRAM] Required DOM elements not found');
+                return;
+            }
+            
             if (data.telegram_token) {
                 statusDiv.classList.remove('hidden');
                 const botName = data.telegram_bot_name || 'Bot';
-                document.getElementById('telegram-status-text').textContent = `✅ Connected: ${botName}`;
+                const botUsername = data.bot_username || '';
+                document.getElementById('telegram-status-text').textContent = `✅ Connected: ${botName}${botUsername ? (' (@' + botUsername + ')') : ''}`;
                 testBtn.disabled = false;
                 tokenInput.placeholder = '(Token already configured)';
             } else {
                 statusDiv.classList.add('hidden');
                 testBtn.disabled = true;
+                tokenInput.placeholder = 'Paste your Telegram bot token here';
             }
         } catch (error) {
-            console.error('Failed to load telegram status:', error);
+            console.error('[TELEGRAM] Failed to load status:', error);
+            // Non-critical, continue
         }
     }
 
@@ -2260,19 +2297,35 @@
             
             if (!response.ok) {
                 if (response.status === 401) {
-                    showToast('Unauthorized - Please login', 'error');
+                    console.warn('[API] Unauthorized access');
+                    showToast('Unauthorized - Please login again', 'error');
                     state.isAdminAuthenticated = false;
                     closeAdminPanel();
                     closeCameraManager();
+                    openAdminLogin();
                     throw new Error('Unauthorized');
                 }
-                throw new Error(`API Error: ${response.status}`);
+                
+                let errorMsg = `API Error: ${response.status}`;
+                try {
+                    const errData = await response.json();
+                    if (errData.message) errorMsg = errData.message;
+                } catch (e) {}
+                
+                console.error('[API]', errorMsg);
+                showToast(errorMsg, 'error');
+                throw new Error(errorMsg);
             }
-            return response.json();
+            
+            const data = await response.json();
+            if (!data.success && data.message) {
+                console.warn('[API] Request failed:', data.message);
+            }
+            return data;
         } catch (error) {
-            console.error('API call failed:', error);
-            if (error.message !== 'Unauthorized') {
-                showToast('Operation failed', 'error');
+            console.error('[API] Call failed:', error);
+            if (error.message !== 'Unauthorized' && error.message.indexOf('API Error') === -1) {
+                showToast('Operation failed: ' + (error.message || 'Unknown error'), 'error');
             }
             throw error;
         }
