@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg/
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+
+# Environment files
+.env
+.env.*
+
+# Node
+node_modules/
+
+# Build outputs
+client/dist/
+
+# Uploads and generated media
+uploads/
+app/uploads/
+*.mp4
+*.avi
+*.mov
+
+# Logs
+*.log
+upload_logs.txt
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/

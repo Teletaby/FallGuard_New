@@ -21,27 +21,25 @@ from reportlab.lib.utils import ImageReader
 # --- IMPORT MODULES ---
 import torch
 from app.skeleton_lstm import LSTMModel, SEQUENCE_LENGTH, FEATURE_SIZE, HIDDEN_SIZE, NUM_LAYERS, OUTPUT_SIZE
-from app.video_utils import extract_55_features, draw_skeleton, predict_torch, detect_multiple_people 
-import mediapipe as mp
+from app.video_utils import detect_multiple_people, draw_skeleton_yolo, build_pose_feature_vector
 
 # --- Global Settings ---
-DEFAULT_FALL_THRESHOLD = 0.70
+DEFAULT_FALL_THRESHOLD = 0.75
 INTERNAL_FPS = 30
 DEFAULT_FALL_DELAY_SECONDS = 2
 DEFAULT_ALERT_COOLDOWN_SECONDS = 60
 
 GLOBAL_SETTINGS = {
-    "fall_threshold": DEFAULT_FALL_THRESHOLD,
-    "fall_delay_seconds": DEFAULT_FALL_DELAY_SECONDS,
-    "alert_cooldown_seconds": DEFAULT_ALERT_COOLDOWN_SECONDS,
-    "privacy_mode": "full_video",  # full_video, skeleton_only, blurred, alerts_only
+    "fall_threshold": 0.55,  # Probability threshold from the new LSTM model
+    "fall_delay_seconds": 3,
+    "alert_cooldown_seconds": 60,
+    "privacy_mode": "full_video",
     "pre_fall_buffer_seconds": 5,
-    "hide_overlays": True,
-    # Run heavy Mediapipe pose processing every N frames
-    # Higher number = faster but less responsive detection
-    "pose_process_interval": 3,  # Process pose every 3rd frame (reduced from 2 for better performance)
-    # Use HOG detector for multi-person detection (True=more accurate, False=faster)
-    "use_hog_detection": False  # Disabled by default for performance - use MediaPipe only
+    "pose_process_interval": 1,
+    "use_yolov11": True,
+    "pose_confidence": 0.25,
+    "pose_iou": 0.45,
+    "pose_max_people": 1
 }
 
 # Telegram Settings
@@ -129,7 +127,8 @@ def save_blocked_list_to_file():
         print(f"[ERROR] Failed to save blocked list to file: {e}")
 
 # --- Model Loading ---
-MODEL_FILE = 'models/skeleton_lstm_pytorch_model.pth'
+MODEL_FILE = 'models/pose_yolov11_lstm_best_recall.pt'
+LEGACY_MODEL_FILE = 'models/skeleton_lstm_pytorch_model.pth'
 LSTM_MODEL = None
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"[INFO] Initializing PyTorch. Using device: {device}")
@@ -137,43 +136,47 @@ print(f"[INFO] Initializing PyTorch. Using device: {device}")
 try:
     try:
         LSTM_MODEL = LSTMModel(FEATURE_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, NUM_LAYERS)
-        
-        if os.path.exists(MODEL_FILE):
-            LSTM_MODEL.load_state_dict(torch.load(MODEL_FILE, map_location=device, weights_only=True))
-            LSTM_MODEL.to(device)
-            LSTM_MODEL.eval()
-            print(f"[SUCCESS] Loaded LSTM Model from {MODEL_FILE}")
-            print(f"           Features: {FEATURE_SIZE}, Hidden: {HIDDEN_SIZE}, Output: {OUTPUT_SIZE}")
-        else:
-            print(f"[WARNING] Model file not found: {MODEL_FILE}")
+        loaded = False
+        for candidate in (MODEL_FILE, LEGACY_MODEL_FILE):
+            if candidate and os.path.exists(candidate):
+                LSTM_MODEL.load_state_dict(torch.load(candidate, map_location=device, weights_only=True))
+                LSTM_MODEL.to(device)
+                LSTM_MODEL.eval()
+                print(f"[SUCCESS] Loaded LSTM Model from {candidate}")
+                print(f"           Features: {FEATURE_SIZE}, Hidden: {HIDDEN_SIZE}, Output: {OUTPUT_SIZE}, Layers: {NUM_LAYERS}")
+                loaded = True
+                MODEL_FILE = candidate
+                break
+        if not loaded:
+            print(f"[WARNING] No LSTM model file found (looked for {MODEL_FILE} and {LEGACY_MODEL_FILE})")
             LSTM_MODEL = None
     except RuntimeError as e:
         if "size mismatch" in str(e):
-            print(f"[INFO] Model shape mismatch detected, trying legacy format (output_size=1)")
+            print(f"[INFO] Model shape mismatch - trying with output_size=1 (legacy format)")
+            # The saved model was trained with output_size=1 (binary classification)
+            # Create model with correct shape and load
             LSTM_MODEL = LSTMModel(FEATURE_SIZE, HIDDEN_SIZE, 1, NUM_LAYERS)
             
             if os.path.exists(MODEL_FILE):
-                LSTM_MODEL.load_state_dict(torch.load(MODEL_FILE, map_location=device, weights_only=True))
-                LSTM_MODEL.to(device)
-                LSTM_MODEL.eval()
-                print(f"[SUCCESS] Loaded LSTM Model (legacy format) from {MODEL_FILE}")
+                try:
+                    LSTM_MODEL.load_state_dict(torch.load(MODEL_FILE, map_location=device, weights_only=True))
+                    LSTM_MODEL.to(device)
+                    LSTM_MODEL.eval()
+                    print(f"[SUCCESS] Loaded LSTM Model (legacy format with output_size=1)")
+                except Exception as e2:
+                    print(f"[ERROR] Failed to load with output_size=1: {e2}")
+                    LSTM_MODEL = None
             else:
                 LSTM_MODEL = None
         else:
             raise
 except Exception as e:
     print(f"[ERROR] Failed to load LSTM model: {e}") 
-    print(f"[INFO] Falling back to enhanced heuristic detection")
+    print(f"[INFO] Using HEURISTIC ONLY for fall detection (LSTM disabled)")
     LSTM_MODEL = None
 
-# MediaPipe Setup
-USE_MEDIAPIPE = False
-try:
-    mp_pose = mp.solutions.pose
-    USE_MEDIAPIPE = True
-    print("[SUCCESS] MediaPipe initialized successfully")
-except Exception as e:
-    print(f"[ERROR] MediaPipe not available: {e}")
+# YOLOv11 Setup - automatically initialized when imported
+print("[INFO] YOLOv11n-pose will be used for all person detection")
 
 # Fall Timer Logic
 class FallTimer:
@@ -231,6 +234,42 @@ def load_incident_reports():
         print(f"[ERROR] Failed to load incident reports: {e}")
     
     INCIDENT_REPORTS = []
+
+def scan_available_cameras(max_index=5):
+    """Probe local camera indices and return ones that respond."""
+    max_index = max(0, min(int(max_index), 15))
+    detected = []
+    for idx in range(max_index + 1):
+        cap = None
+        try:
+            # CAP_DSHOW reduces connection latency on Windows; fall back if unavailable
+            if hasattr(cv2, 'CAP_DSHOW'):
+                cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+            else:
+                cap = cv2.VideoCapture(idx)
+            if not cap or not cap.isOpened():
+                continue
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                continue
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or frame.shape[1]
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or frame.shape[0]
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            detected.append({
+                "index": idx,
+                "name": f"Camera {idx}",
+                "resolution": [int(width), int(height)],
+                "fps": round(float(fps), 2) if fps and fps > 0 else None
+            })
+        except Exception as err:
+            print(f"[SCAN] Camera index {idx} check failed: {err}")
+        finally:
+            if cap:
+                cap.release()
+    return detected
 
 # Flask app 
 app = Flask(__name__, static_folder='app', static_url_path='')
@@ -445,6 +484,8 @@ def apply_privacy_mode(frame, mode):
     """Apply privacy mode to frame"""
     if mode == "full_video":
         return frame
+    if mode == "no_overlay":
+        return frame
     elif mode == "skeleton_only":
         # Return black frame with just skeleton (will be drawn later)
         black_frame = np.zeros_like(frame)
@@ -510,21 +551,12 @@ class CameraProcessor(threading.Thread):
         self.people_trackers = {}  # Dictionary to store tracker for each person (person_id -> tracker_state)
         self.next_person_id = 1
         # How many seconds without detection before a tracker is removed
-        # Set to 2.5 seconds for good tracking with pose_process_interval=2
         self.person_timeout = 2.5  # seconds
         self.person_pose_sequences = {}  # Track pose sequences per person
         self.person_fall_states = {}  # Track fall state per person
         
+        # YOLOv11 is initialized globally in video_utils.py
         self.mp_pose_instance = None
-        if USE_MEDIAPIPE:
-            self.mp_pose_instance = mp_pose.Pose(
-                static_image_mode=False, 
-                model_complexity=1,  # Use full model for better accuracy (1=full, 0=lite)
-                min_detection_confidence=0.5,  # Balanced threshold for accuracy
-                min_tracking_confidence=0.4,  # Better tracking with moderate confidence
-                enable_segmentation=False,
-                smooth_landmarks=True
-            ) 
         
         self.sequence_length = sequence_length
         self.pose_sequence = deque([np.zeros(FEATURE_SIZE, dtype=np.float32) for _ in range(sequence_length)], 
@@ -533,11 +565,14 @@ class CameraProcessor(threading.Thread):
         self.latest_pose_results = None
         self.latest_fall_prob = 0.0
         self.latest_features = None
+        self.latest_keypoints = None
         
         self.frame_count = 0
         self.last_fps_update = time.time()
         self.current_fps = 0
         self.processing_time = 0
+        self.background_frame = None
+        self.ghost_diff_threshold = 10.0
         
         # Initialize frame buffer for pre-fall recording
         FRAME_BUFFERS[self.camera_id] = deque(maxlen=BUFFER_SIZE)
@@ -559,68 +594,83 @@ class CameraProcessor(threading.Thread):
             "lock": threading.Lock()
         }
 
-    def _match_person(self, bbox, threshold=100):
+    def _match_person(self, bbox, threshold=600):
         """
-        Match a detected person to an existing tracker using improved multi-criteria matching.
+        Match a detected person to an existing tracker using multi-criteria matching.
         Returns person_id if match found, None otherwise.
-        
-        Uses:
-        - Bounding box proximity (spatial distance)
-        - Size consistency (avoid matching different-sized objects)
-        - Movement prediction (expected motion)
         """
         x, y, w, h = bbox
         bbox_center = (x + w/2, y + h/2)
         bbox_size = w * h
+        bbox_aspect = h / w if w > 0 else 0
         
         best_match = None
         best_score = 0.0
-        best_distance = float('inf')
         
         for person_id, tracker in self.people_trackers.items():
             tracker_center = tracker['center']
             tracker_bbox = tracker['bbox']
             tracker_size = tracker_bbox[2] * tracker_bbox[3]
+            tracker_aspect = tracker_bbox[3] / tracker_bbox[2] if tracker_bbox[2] > 0 else 0
             
             # 1. Calculate spatial distance between centers
             distance = np.sqrt((bbox_center[0] - tracker_center[0])**2 + (bbox_center[1] - tracker_center[1])**2)
             
-            # 2. Size consistency (allow more variation for better tracking)
-            # Allow 0.25 to 4.0x size variation to account for perspective and movement
+            # 2. Size consistency - allow wider variation for people at different distances
             size_ratio = min(bbox_size, tracker_size) / max(bbox_size, tracker_size) if max(bbox_size, tracker_size) > 0 else 0
             
-            # 3. Distance-based confidence: Closer is better
-            # Use an exponential decay to give priority to very close matches
-            position_confidence = np.exp(-distance / 60.0) if distance < 250 else 0.0
+            # 3. Aspect ratio consistency
+            aspect_ratio = min(bbox_aspect, tracker_aspect) / max(bbox_aspect, tracker_aspect) if max(bbox_aspect, tracker_aspect) > 0 else 0
             
-            # 4. Size consistency score: Penalize dramatic size changes but be lenient
-            if size_ratio >= 0.25:
-                size_confidence = min(1.0, size_ratio * 1.2)
+            # 4. Distance-based confidence with WIDER matching range for multi-person
+            position_confidence = np.exp(-distance / 300.0) if distance < 800 else 0.0
+            
+            # 5. Size consistency score: More lenient for people at different distances
+            if size_ratio >= 0.15:
+                size_confidence = size_ratio
             else:
                 size_confidence = 0.0
             
-            # 5. Combined score: Weighted combination
-            # Distance is more important than size for tracking continuity
-            combined_score = (position_confidence * 0.75) + (size_confidence * 0.25)
+            # 6. Aspect ratio consistency: Very lenient
+            if aspect_ratio >= 0.40:
+                aspect_confidence = aspect_ratio
+            else:
+                aspect_confidence = 0.0
             
-            # Only consider matches that:
-            # - Are reasonably close (< threshold distance)
-            # - Have acceptable size similarity (ratio > 0.25)
-            # - Have positive combined score
-            if distance < threshold and size_ratio > 0.25 and combined_score > best_score:
-                best_distance = distance
+            # 7. Combined score with adjusted weights for multi-person detection
+            combined_score = (position_confidence * 0.75) + (size_confidence * 0.15) + (aspect_confidence * 0.10)
+            
+            # Match if close enough and score is good
+            if distance < threshold and combined_score > best_score:
                 best_score = combined_score
                 best_match = person_id
         
-        # Log matching decision for debugging
-        if best_match is not None:
-            print(f"[TRACKING] Matched Person #{best_match} (distance={best_distance:.1f}, score={best_score:.3f})")
-        
         return best_match
+
+    def _reject_ghost_detections(self, detections, gray_frame):
+        if self.background_frame is None:
+            return detections
+        filtered = []
+        for person in detections:
+            x, y, w, h = person.get('bbox', (0, 0, 0, 0))
+            if w <= 0 or h <= 0:
+                continue
+            x0 = max(0, x)
+            y0 = max(0, y)
+            x1 = min(gray_frame.shape[1], x0 + w)
+            y1 = min(gray_frame.shape[0], y0 + h)
+            if x1 <= x0 or y1 <= y0:
+                continue
+            roi = gray_frame[y0:y1, x0:x1]
+            bg_roi = self.background_frame[y0:y1, x0:x1].astype(np.uint8)
+            mean_diff = cv2.absdiff(roi, bg_roi).mean()
+            if mean_diff >= self.ghost_diff_threshold:
+                filtered.append(person)
+        return filtered
 
     def update_fall_timer_threshold(self):
         delay_seconds = GLOBAL_SETTINGS['fall_delay_seconds']
-        frame_threshold = max(1, round(delay_seconds * INTERNAL_FPS)) 
+        frame_threshold = max(3, round(delay_seconds * INTERNAL_FPS))
         self.fall_timer = FallTimer(threshold_frames=frame_threshold)
 
     def update_camera_status(self, status, color, last_alert=None, is_live=True, person_count=0):
@@ -628,11 +678,10 @@ class CameraProcessor(threading.Thread):
             if self.camera_id not in CAMERA_STATUS:
                 CAMERA_STATUS[self.camera_id] = {}
             
-            # Always update all fields to ensure consistency
             CAMERA_STATUS[self.camera_id] = {
                 "status": status,
                 "color": color,
-                "isLive": is_live and self.is_running,  # Double-check running state
+                "isLive": is_live and self.is_running,
                 "name": self.name,
                 "source": str(self.src),
                 "confidence_score": float(self.latest_fall_prob),
@@ -644,10 +693,6 @@ class CameraProcessor(threading.Thread):
             if last_alert:
                 CAMERA_STATUS[self.camera_id]["lastAlert"] = time.ctime(last_alert)
             
-            # Log status changes for debugging multi-person detection
-            if person_count > 0:
-                print(f"[STATUS] {self.name}: status='{status}', color={color}, people={person_count}, fps={self.current_fps:.1f}")
-            
             # Sync with camera definitions
             if self.camera_id in CAMERA_DEFINITIONS:
                 CAMERA_DEFINITIONS[self.camera_id]['isLive'] = is_live and self.is_running
@@ -655,7 +700,6 @@ class CameraProcessor(threading.Thread):
     def trigger_website_alert(self, fall_prob, person_id=None):
         """
         Trigger website alert for this camera with enhanced multi-person support.
-        Creates a unique, high-priority alert that immediately notifies the dashboard.
         """
         alert_id = f"{self.camera_id}_person{person_id}_{int(time.time() * 1000)}" if person_id else f"{self.camera_id}_{int(time.time() * 1000)}"
         
@@ -716,7 +760,7 @@ class CameraProcessor(threading.Thread):
         def send_alert_async():
             try:
                 # Convert frames to video
-                video_bytes = frames_to_video(pre_fall_frames, fps=15)  # Lower FPS for smaller file
+                video_bytes = frames_to_video(pre_fall_frames, fps=15)
                 
                 if not video_bytes:
                     return
@@ -742,7 +786,7 @@ class CameraProcessor(threading.Thread):
                 with telegram_lock:
                     for subscriber in TELEGRAM_SUBSCRIBERS:
                         try:
-                            if len(video_bytes) < 50 * 1024 * 1024:  # Telegram 50MB limit
+                            if len(video_bytes) < 50 * 1024 * 1024:
                                 success = send_telegram_video(subscriber['chat_id'], video_bytes, caption, "fall_incident.mp4")
                             else:
                                 # Fall back to photo if video too large
@@ -763,199 +807,33 @@ class CameraProcessor(threading.Thread):
         alert_thread = threading.Thread(target=send_alert_async, daemon=True)
         alert_thread.start()
 
-    def extract_features_and_bbox(self, frame):
-        if USE_MEDIAPIPE and self.mp_pose_instance:
-            try:
-                bbox, feature_vec, pose_results = extract_55_features(frame, self.mp_pose_instance)
-                self.latest_pose_results = pose_results
-                self.latest_features = feature_vec
-                
-                if feature_vec is not None and np.any(feature_vec != 0):
-                    pass
-                else:
-                    feature_vec = np.zeros(FEATURE_SIZE, dtype=np.float32)
-                    bbox = None
-                    pose_results = None
-            except Exception as e:
-                print(f"[ERROR] Feature extraction failed: {e}")
-                feature_vec = np.zeros(FEATURE_SIZE, dtype=np.float32)
-                bbox = None
-                pose_results = None
-        else:
-            feature_vec = np.zeros(FEATURE_SIZE, dtype=np.float32)
-            bbox = None
-            pose_results = None
-            
-        self.pose_sequence.append(feature_vec)
-        return bbox, feature_vec, pose_results
-
-    def predict_fall_enhanced(self):
-        current_threshold = GLOBAL_SETTINGS['fall_threshold']
-        fall_probability = 0.0
-
-        if len(self.pose_sequence) > 0 and self.latest_features is not None:
-            features = self.latest_features
-            
-            HWR = features[0]
-            TorsoAngle = features[1]
-            D = features[2]
-            H = features[5]
-            FallAngleD = features[6]
-            
-            fall_score = 0.0
-            
-            if 0.0 < HWR < 0.7:
-                fall_score += 0.3
-                if HWR < 0.5:
-                    fall_score += 0.2
-            
-            if TorsoAngle > 45:
-                fall_score += 0.25
-                if TorsoAngle > 70:
-                    fall_score += 0.15
-            
-            if H > 0.6:
-                fall_score += 0.2
-                if H > 0.75:
-                    fall_score += 0.2
-            
-            if FallAngleD < 30:
-                fall_score += 0.3
-            
-            if abs(D) < 0.15:
-                fall_score += 0.15
-            
-            fall_probability = min(fall_score, 0.99)
-            
-            if hasattr(self, 'debug_counter'):
-                self.debug_counter += 1
-            else:
-                self.debug_counter = 0
-                
-            if self.debug_counter % 30 == 0:
-                print(f"[{self.name}] Heuristic: HWR={HWR:.2f}, Torso={TorsoAngle:.0f}°, H={H:.2f}, Angle={FallAngleD:.0f}°, Score={fall_probability:.2f}")
-
-        if LSTM_MODEL is not None and len(self.pose_sequence) >= self.sequence_length:
-            try:
-                input_data = np.array(self.pose_sequence, dtype=np.float32)
-                input_tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0).to(self.device)
-
-                with torch.no_grad():
-                    pred, prob = predict_torch(LSTM_MODEL, input_tensor, threshold=current_threshold)
-                
-                if prob > fall_probability:
-                    fall_probability = prob
-                    if self.debug_counter % 30 == 0:
-                        print(f"[{self.name}] LSTM override: {prob:.2f}")
-            except Exception as e:
-                print(f"[ERROR] LSTM prediction failed for {self.camera_id}: {e}")
-
-        self.latest_fall_prob = fall_probability
-        return (fall_probability >= current_threshold), fall_probability
-
     def _predict_fall_for_person(self, person_id, feature_vec):
-        """Predict fall for a specific person using their feature vector"""
-        current_threshold = GLOBAL_SETTINGS['fall_threshold']
-        fall_probability = 0.0
-        
-        # Heuristic-based prediction
-        if feature_vec is not None and np.any(feature_vec != 0):
-            HWR = feature_vec[0]
-            TorsoAngle = feature_vec[1]
-            D = feature_vec[2]
-            H = feature_vec[5]
-            FallAngleD = feature_vec[6]
-            
-            fall_score = 0.0
-            
-            # More aggressive fall detection heuristics
-            # HWR (Height-Width Ratio): Low ratio indicates horizontal position (lying down)
-            if 0.0 < HWR < 0.70:  # Lowered from 0.65 to 0.70
-                fall_score += 0.35
-                if HWR < 0.50:  # Lowered from 0.45
-                    fall_score += 0.30  # Increased from 0.25
-            
-            # TorsoAngle: High angle indicates bent/tilted torso
-            if TorsoAngle > 50:  # Lowered from 55
-                fall_score += 0.30  # Increased from 0.25
-                if TorsoAngle > 65:  # Lowered from 70
-                    fall_score += 0.20  # Increased from 0.15
-            
-            # H (relative height): Works for both close and distant people
-            if H > 0.48:  # Lowered from 0.52
-                fall_score += 0.10
-                if H > 0.70:  # Lowered from 0.72
-                    fall_score += 0.15  # Increased from 0.12
-            
-            # FallAngleD: Small angle indicates horizontal fall trajectory
-            if FallAngleD < 35:  # Increased from 30
-                fall_score += 0.35  # Increased from 0.30
-                if FallAngleD < 20:  # Increased from 18
-                    fall_score += 0.15  # Increased from 0.12
-            
-            # D (horizontal displacement)
-            if abs(D) < 0.15:  # Increased from 0.12
-                fall_score += 0.10
-            elif abs(D) > 0.35:
-                fall_score -= 0.03  # Reduced penalty from 0.05
-            
-            fall_probability = min(fall_score, 0.99)
-        
-        # LSTM prediction if available
-        if LSTM_MODEL is not None and hasattr(self, 'person_pose_sequences'):
-            if person_id in self.person_pose_sequences:
-                sequence = self.person_pose_sequences.get(person_id)
-                if sequence and len(sequence) >= self.sequence_length:
-                    try:
-                        input_data = np.array(list(sequence), dtype=np.float32)
-                        input_tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0).to(self.device)
-                        
-                        with torch.no_grad():
-                            pred, prob = predict_torch(LSTM_MODEL, input_tensor, threshold=current_threshold)
-                        
-                        if prob > fall_probability:
-                            fall_probability = prob
-                    except Exception as e:
-                        print(f"[ERROR] LSTM prediction for person {person_id}: {e}")
-        
-        return (fall_probability >= current_threshold), fall_probability
-
-    def draw_enhanced_overlay(self, frame, bbox, fall_confirmed, fall_prob, current_threshold, feature_vector):
-        h, w, _ = frame.shape
-        
-        # Apply privacy mode
-        privacy_mode = GLOBAL_SETTINGS.get('privacy_mode', 'full_video')
-        display_frame = apply_privacy_mode(frame, privacy_mode)
-
-        hide_overlays = bool(GLOBAL_SETTINGS.get('hide_overlays', False))
-        
-        if (not hide_overlays) and bbox is not None and bbox[2] > 0 and bbox[3] > 0:
-            x, y, bw, bh = bbox
-            color = (0, 0, 255) if fall_confirmed else (0, 255, 0)
-            thickness = 5 if fall_confirmed else 2
-            
-            cv2.rectangle(display_frame, (int(x), int(y)), (int(x + bw), int(y + bh)), color, thickness)
-            
-            label = "FALL" if fall_confirmed else "PERSON"
-            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)[0]
-            label_x = int(x + (bw - label_size[0]) / 2)
-            label_y = max(30, int(y - 15))
-            
-            cv2.rectangle(display_frame, (label_x - 8, label_y - label_size[1] - 8), 
-                         (label_x + label_size[0] + 8, label_y + 8), color, -1)
-            cv2.putText(display_frame, label, (label_x, label_y), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
-        
-        # Draw skeleton if privacy mode allows and we have pose results
-        if (not hide_overlays) and privacy_mode in ['full_video', 'skeleton_only'] and self.latest_pose_results:
-            display_frame = draw_skeleton(display_frame, self.latest_pose_results, fall_confirmed)
-        
-        # Add privacy mode indicator
-        mode_text = f"Mode: {privacy_mode.replace('_', ' ').title()}"
-        cv2.putText(display_frame, mode_text, (10, h - 10), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        return display_frame
+        """Predict fall probability using the trained LSTM sequence model."""
+        if feature_vec is None or not np.any(feature_vec):
+            return False, 0.0
+        if LSTM_MODEL is None or not hasattr(self, 'person_pose_sequences'):
+            return False, 0.0
+        if person_id not in self.person_pose_sequences:
+            return False, 0.0
+        pose_seq = self.person_pose_sequences[person_id]
+        if len(pose_seq) < SEQUENCE_LENGTH:
+            return False, 0.0
+        try:
+            frames = np.array(list(pose_seq)[-SEQUENCE_LENGTH:], dtype=np.float32)
+            input_tensor = torch.tensor(frames, dtype=torch.float32).unsqueeze(0).to(device)
+            with torch.no_grad():
+                output = LSTM_MODEL(input_tensor)
+                if output.ndim == 2 and output.shape[1] > 1:
+                    probs = torch.softmax(output, dim=1)
+                    fall_probability = float(probs[0, 1])
+                else:
+                    fall_probability = float(torch.sigmoid(output).flatten().tolist()[0])
+            fall_probability = max(0.0, min(1.0, fall_probability))
+            is_fall = fall_probability >= GLOBAL_SETTINGS['fall_threshold']
+            return is_fall, fall_probability
+        except Exception as e:
+            print(f"[LSTM ERROR] Person {person_id}: {type(e).__name__}: {e}")
+            return False, 0.0
 
     def run(self):
         self.update_fall_timer_threshold()
@@ -1040,15 +918,12 @@ class CameraProcessor(threading.Thread):
         consecutive_failures = 0
         max_failures = 30
         
-        # Performance options: Skip frames for video files and limit how often we run heavy
-        # pose processing. Reducing pose processing frequency lowers CPU usage and removes
-        # jitter from bounding boxes.
+        # Performance options
         frame_skip = 0
-        # Get pose_process_interval from GLOBAL_SETTINGS (already set during init)
-        # 3 = every 3rd frame (good balance: ~10 fps pose processing at 30fps input)
-        self.pose_process_interval = GLOBAL_SETTINGS.get('pose_process_interval', 3)
-        self.force_detection_next_frame = True  # FORCE detection on first frame
+        self.pose_process_interval = GLOBAL_SETTINGS.get('pose_process_interval', 1)
+        self.force_detection_next_frame = True
         frame_skip_counter = 0
+        self.frames_without_people = 0
         
         print(f"[START] {self.name}: Starting main loop with pose_process_interval={self.pose_process_interval}, force_detection_next_frame=True")
         
@@ -1069,21 +944,20 @@ class CameraProcessor(threading.Thread):
                     # Reset video to beginning when it ends
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = self.cap.read()
-                    # Reset fall detection state when video loops (but keep trackers for continuity)
+                    # Reset fall detection state when video loops
                     self.consecutive_fall_frames = 0
                     self.alert_sent_for_current_fall = False
                     self.current_fall_id = None
                     
-                    # CRITICAL: Clear ALL people trackers and person IDs on video loop
-                    # This ensures Person #1 restarts instead of incrementing to Person #2
+                    # Clear ALL people trackers and person IDs on video loop
                     self.people_trackers.clear()
                     if hasattr(self, 'person_pose_sequences'):
                         self.person_pose_sequences.clear()
                     if hasattr(self, 'person_fall_states'):
                         self.person_fall_states.clear()
-                    self.next_person_id = 1  # Reset person ID counter
+                    self.next_person_id = 1
                     
-                    # FORCE detection on next frame to re-detect people at loop start
+                    # FORCE detection on next frame
                     self.force_detection_next_frame = True
                     print(f"[VIDEO-LOOP] {self.name}: Video looped - cleared all trackers, reset person IDs, forcing detection")
 
@@ -1098,23 +972,30 @@ class CameraProcessor(threading.Thread):
                 consecutive_failures = 0
                 
                 frame = cv2.resize(frame, (640, 480))
+                gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                if self.background_frame is None:
+                    self.background_frame = gray_frame.astype(np.float32)
                 
                 # Add frame to buffer for pre-fall recording
                 FRAME_BUFFERS[self.camera_id].append(frame.copy())
                 
-                # MULTI-PERSON DETECTION: Track all detected people
+                # MULTI-PERSON DETECTION: YOLOv11 detects all people per frame
+                # Optimize: detect every 2 frames for better FPS
                 people = []
-                if self.mp_pose_instance and (self.force_detection_next_frame or (self.frame_count % max(1, self.pose_process_interval) == 0)):
-                    # Use MediaPipe only for multi-person detection (HOG disabled for performance)
-                    all_people = detect_multiple_people(frame, self.mp_pose_instance, use_hog=False)
-                    # Keep all detected people
-                    people = all_people
-                    if people:
-                        print(f"[DETECTION] Found {len(people)} person(s) in frame #{self.frame_count}")
-                    else:
-                        print(f"[DETECTION] No people detected in frame #{self.frame_count}")
+                if self.force_detection_next_frame or (self.frame_count % 2 == 0):
+                    # Use YOLOv11-Pose for multi-person detection
+                    people = detect_multiple_people(
+                        frame,
+                        None,
+                        use_hog=False,
+                        max_people=GLOBAL_SETTINGS.get('pose_max_people'),
+                        conf=GLOBAL_SETTINGS.get('pose_confidence'),
+                        iou=GLOBAL_SETTINGS.get('pose_iou')
+                    )
                     # Clear the force flag after detection
                     self.force_detection_next_frame = False
+                    if people:
+                        people = self._reject_ghost_detections(people, gray_frame)
                 
                 # Track and process multiple people
                 current_time = time.time()
@@ -1125,7 +1006,7 @@ class CameraProcessor(threading.Thread):
                 # Reset person ID counter when no people are detected or after many frames
                 if len(people) == 0 and len(self.people_trackers) == 0:
                     self.next_person_id = 1
-                elif self.next_person_id > 100:  # Also reset if IDs get too high
+                elif self.next_person_id > 100:
                     # Clean up all old trackers and reset
                     self.people_trackers.clear()
                     self.person_pose_sequences.clear() if hasattr(self, 'person_pose_sequences') else None
@@ -1134,18 +1015,14 @@ class CameraProcessor(threading.Thread):
                 
                 # If we have new detections, match them to existing people
                 if len(people) > 0:
+                    self.frames_without_people = 0
                     for person_idx, person in enumerate(people):
                         person_bbox = person['bbox']
-                        person_landmarks = person['landmarks']
+                        person_keypoints = person['keypoints']  # YOLOv11 keypoints
                         
-                        # Match person to existing tracker or create new one
-                        person_id = self._match_person(person_bbox)
-                        
-                        if person_id is None:
-                            # New person detected
-                            person_id = self.next_person_id
-                            self.next_person_id += 1
-                            print(f"[DETECTION] New person detected: Person #{person_id}")
+                        # Force a single logical person identifier
+                        person_id = 1
+                        self.next_person_id = 2  # keep >1 so reset logic still works when needed
                         
                         tracked_people_ids.add(person_id)
                         
@@ -1153,7 +1030,6 @@ class CameraProcessor(threading.Thread):
                         new_bbox = person_bbox
                         if person_id in self.people_trackers and 'bbox' in self.people_trackers[person_id]:
                             old_bbox = self.people_trackers[person_id]['bbox']
-                            # Balanced smoothing with 65% old, 35% new (responsive but stable)
                             new_bbox = (
                                 int(old_bbox[0] * 0.65 + person_bbox[0] * 0.35),
                                 int(old_bbox[1] * 0.65 + person_bbox[1] * 0.35),
@@ -1161,35 +1037,32 @@ class CameraProcessor(threading.Thread):
                                 int(old_bbox[3] * 0.65 + person_bbox[3] * 0.35)
                             )
                         
-                        # Update tracker state
+                        # Update tracker state - Store keypoints for skeleton drawing
                         self.people_trackers[person_id] = {
                             'center': (person['x'], person['y']),
                             'bbox': new_bbox,
                             'last_seen': current_time,
-                            'pose_results': person_landmarks
+                            'keypoints': person_keypoints  # Store YOLOv11 keypoints
                         }
                         
-                        # Extract features for this person
-                        try:
-                            from app.video_utils import extract_8_kinematic_features
-                            features_8 = extract_8_kinematic_features(person_landmarks)
-                            feature_vec = np.zeros(FEATURE_SIZE, dtype=np.float32)
-                            feature_vec[:8] = features_8
-                            
-                            # Use person's own pose sequence
-                            if not hasattr(self, 'person_pose_sequences'):
-                                self.person_pose_sequences = {}
-                            if person_id not in self.person_pose_sequences:
-                                self.person_pose_sequences[person_id] = deque(
-                                    [np.zeros(FEATURE_SIZE, dtype=np.float32) for _ in range(self.sequence_length)],
-                                    maxlen=self.sequence_length
-                                )
-                            
-                            self.person_pose_sequences[person_id].append(feature_vec)
-                            
-                        except Exception as e:
-                            feature_vec = np.zeros(FEATURE_SIZE, dtype=np.float32)
-                            print(f"[ERROR] Feature extraction for person {person_id}: {e}")
+                        # Extract pose feature vector for this person
+                        feature_vec = build_pose_feature_vector(
+                            person_keypoints,
+                            frame.shape[1],
+                            frame.shape[0]
+                        )
+                        if feature_vec is None:
+                            continue
+
+                        if not hasattr(self, 'person_pose_sequences'):
+                            self.person_pose_sequences = {}
+                        if person_id not in self.person_pose_sequences:
+                            self.person_pose_sequences[person_id] = deque(
+                                [np.zeros(FEATURE_SIZE, dtype=np.float32) for _ in range(self.sequence_length)],
+                                maxlen=self.sequence_length
+                            )
+
+                        self.person_pose_sequences[person_id].append(feature_vec)
                         
                         # Predict fall for this person
                         is_falling_person, fall_prob_person = self._predict_fall_for_person(person_id, feature_vec)
@@ -1198,9 +1071,9 @@ class CameraProcessor(threading.Thread):
                             primary_person_fall_prob = fall_prob_person
                             self.latest_fall_prob = fall_prob_person
                             self.latest_features = feature_vec
-                            self.latest_pose_results = person_landmarks
+                            self.latest_keypoints = person_keypoints
                         
-                        # Handle fall detection per person
+                        # Handle fall detection per person - REQUIRE 7+ FRAMES for confirmation
                         if is_falling_person:
                             if not hasattr(self, 'person_fall_states'):
                                 self.person_fall_states = {}
@@ -1209,8 +1082,8 @@ class CameraProcessor(threading.Thread):
                             
                             self.person_fall_states[person_id]['frames'] += 1
                             
-                            # Confirm fall after 3 consecutive frames
-                            if self.person_fall_states[person_id]['frames'] >= 3:
+                            # Confirm fall after 7 consecutive frames
+                            if self.person_fall_states[person_id]['frames'] >= 7:
                                 detected_fall = True
                                 
                                 # Send alert for this person
@@ -1221,19 +1094,25 @@ class CameraProcessor(threading.Thread):
                                 if not self.person_fall_states[person_id]['alerted']:
                                     self.create_incident_report(frame.copy(), fall_prob_person, person_id)
                                     self.person_fall_states[person_id]['alerted'] = True
-                                
-                                print(f"[FALL] Person #{person_id} at {self.name} - Confidence: {fall_prob_person*100:.1f}%")
                         else:
                             # Person not falling - reset fall state
                             if hasattr(self, 'person_fall_states') and person_id in self.person_fall_states:
                                 self.person_fall_states[person_id]['frames'] = 0
                                 self.person_fall_states[person_id]['alerted'] = False
                 else:
-                    # No new detection on this frame - keep existing tracked people
-                    for person_id in list(self.people_trackers.keys()):
-                        tracked_people_ids.add(person_id)
-                        # Update last_seen to keep tracker alive
-                        self.people_trackers[person_id]['last_seen'] = current_time
+                    # Gradually age-out trackers when detections stop coming in
+                    self.frames_without_people += 1
+                    if self.frames_without_people >= 2:
+                        if self.people_trackers:
+                            self.people_trackers.clear()
+                        if hasattr(self, 'person_pose_sequences'):
+                            self.person_pose_sequences.clear()
+                        if hasattr(self, 'person_fall_states'):
+                            self.person_fall_states.clear()
+                        self.next_person_id = 1
+                        self.latest_keypoints = None
+                    if self.background_frame is not None and not self.people_trackers:
+                        cv2.accumulateWeighted(gray_frame, self.background_frame, 0.01)
                 
                 # Remove people not seen for timeout
                 stale_people = []
@@ -1247,7 +1126,6 @@ class CameraProcessor(threading.Thread):
                         del self.person_pose_sequences[person_id]
                     if person_id in self.person_fall_states:
                         del self.person_fall_states[person_id]
-                    print(f"[TRACKING] Person #{person_id} removed from {self.name} (timeout)")
                 
                 # Reset person ID counter if all people are gone
                 if len(self.people_trackers) == 0 and len(people) == 0:
@@ -1255,7 +1133,7 @@ class CameraProcessor(threading.Thread):
                 
                 # Update status
                 if not detected_fall:
-                    # Use tracked_people_ids count (includes both newly detected and tracked from previous frames)
+                    # Use tracked_people_ids count
                     num_people_tracked = len(tracked_people_ids)
                     if num_people_tracked > 0:
                         status_msg = f"{num_people_tracked} Person(s) - Normal" if num_people_tracked > 1 else "Normal"
@@ -1263,8 +1141,19 @@ class CameraProcessor(threading.Thread):
                     else:
                         self.update_camera_status("No People Detected", "gray", is_live=True, person_count=0)
                 
-                # Draw frame with multi-person detection
-                processed = frame.copy()
+                # Apply privacy mode to frame before skeleton drawing for certain modes
+                privacy_mode = GLOBAL_SETTINGS.get('privacy_mode', 'full_video')
+                
+                # Draw frame with skeleton overlay only (no bounding boxes)
+                # For skeleton_only and alerts_only, start with black frame so skeleton shows clearly
+                if privacy_mode == "skeleton_only":
+                    processed = np.zeros_like(frame)  # Black frame for skeleton only
+                elif privacy_mode == "alerts_only":
+                    processed = np.zeros_like(frame)  # Black frame for alerts only (no skeleton drawn)
+                elif privacy_mode == "blurred":
+                    processed = cv2.GaussianBlur(frame, (51, 51), 30)  # Blur before skeleton
+                else:  # full_video
+                    processed = frame.copy()
                 
                 # Color palette for different people
                 person_colors = [
@@ -1278,104 +1167,45 @@ class CameraProcessor(threading.Thread):
                     (0, 128, 255),    # Red-Orange
                 ]
                 
-                # Draw skeleton for all tracked people FIRST (so boxes appear on top)
-                img_h, img_w = processed.shape[:2]
-                hide_overlays = bool(GLOBAL_SETTINGS.get('hide_overlays', False))
-                if not hide_overlays:
-                    for person_idx, person_id in enumerate(sorted(tracked_people_ids)):
-                        if person_id in self.people_trackers:
-                            pose_landmarks = self.people_trackers[person_id].get('pose_results')
-                            if pose_landmarks:
-                                person_falling = False
-                                if hasattr(self, 'person_fall_states') and person_id in self.person_fall_states:
-                                    person_falling = self.person_fall_states[person_id]['frames'] >= 3
-                                
-                                # Get color for this person
-                                color_idx = person_idx % len(person_colors)
-                                person_color = person_colors[color_idx]
-                                
-                                # Choose color based on fall status
-                                if person_falling:
-                                    point_color = (0, 0, 255)  # Red for falling
-                                    line_color = (0, 0, 255)
-                                else:
-                                    point_color = person_color  # Use assigned color
-                                    line_color = person_color
-                                
-                                # Draw skeleton with MediaPipe - bendable style with prominent joints
-                                try:
-                                    mp_drawing = mp.solutions.drawing_utils
-                                    # pose_landmarks is already a NormalizedLandmarkList, not a full result
-                                    # Draw with smaller connection lines but large joint circles for bendable look
-                                    mp_drawing.draw_landmarks(
-                                        processed,
-                                        pose_landmarks,
-                                        mp.solutions.pose.POSE_CONNECTIONS,
-                                        landmark_drawing_spec=mp_drawing.DrawingSpec(color=point_color, thickness=6, circle_radius=5),
-                                        connection_drawing_spec=mp_drawing.DrawingSpec(color=line_color, thickness=1)
-                                    )
-                                    print(f"[SKELETON] Drew skeleton for person #{person_id} (falling={person_falling})")
-                                except Exception as e:
-                                    print(f"[SKELETON ERROR] Failed to draw skeleton: {e}")
-                
-                # Draw bounding boxes for all tracked people
-                if not hide_overlays:
-                    for person_idx, person_id in enumerate(sorted(tracked_people_ids)):
-                        if person_id in self.people_trackers:
-                            bx, by, bw_box, bh_box = self.people_trackers[person_id]['bbox']
-                        
-                            # Ensure integers and clamp to image bounds
-                            x = int(max(0, min(bx, img_w - 1)))
-                            y = int(max(0, min(by, img_h - 1)))
-                            x2 = int(max(x + 1, min(bx + bw_box, img_w)))
-                            y2 = int(max(y + 1, min(by + bh_box, img_h)))
-                        
-                            # Check if this person is falling
+                # Draw skeleton for ALL detected people (only if not in alerts_only mode)
+                if privacy_mode not in ("alerts_only", "no_overlay"):
+                    for person_idx, person in enumerate(people):
+                        person_keypoints = person.get('keypoints')
+                        if person_keypoints is not None:
+                            # Find person_id if tracked
+                            person_id = None
+                            person_bbox = person['bbox']
+                            for pid, tracker in self.people_trackers.items():
+                                tracker_bbox = tracker.get('bbox', (0, 0, 0, 0))
+                                # Simple IoU check
+                                x1, y1, w1, h1 = person_bbox
+                                x2, y2, w2, h2 = tracker_bbox
+                                xi1, yi1 = max(x1, x2), max(y1, y2)
+                                xi2, yi2 = min(x1+w1, x2+w2), min(y1+h1, y2+h2)
+                                if xi2 > xi1 and yi2 > yi1:
+                                    intersection = (xi2 - xi1) * (yi2 - yi1)
+                                    area1, area2 = w1*h1, w2*h2
+                                    union = area1 + area2 - intersection
+                                    if union > 0 and intersection / union > 0.5:
+                                        person_id = pid
+                                        break
+                            
                             person_falling = False
-                            fall_frames = 0
-                            if hasattr(self, 'person_fall_states') and person_id in self.person_fall_states:
-                                fall_frames = self.person_fall_states[person_id]['frames']
-                                person_falling = fall_frames >= 3
-                        
+                            if person_id and hasattr(self, 'person_fall_states') and person_id in self.person_fall_states:
+                                person_falling = self.person_fall_states[person_id]['frames'] >= 7
+                            
                             # Get color for this person
                             color_idx = person_idx % len(person_colors)
                             person_color = person_colors[color_idx]
-                        
-                            # Choose color and thickness based on fall status
+                            
+                            # Choose color based on fall status
                             if person_falling:
-                                box_color = (0, 0, 255)  # Red for falling
-                                thickness = 5
+                                color = (0, 0, 255)  # Red for falling
                             else:
-                                box_color = person_color  # Use assigned color for normal
-                                thickness = 3
-                        
-                            # Draw box
-                            if x2 > x and y2 > y:
-                                cv2.rectangle(processed, (x, y), (x2, y2), box_color, thickness)
-                        
-                            # Draw label
-                            if person_falling:
-                                label = f"Person #{person_id} - FALLING!"
-                                label_color = (0, 0, 255)
-                            else:
-                                label = f"Person #{person_id}"
-                                label_color = person_color
-                        
-                            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
-                            label_x = max(5, x)
-                            label_y = max(25, y - 8) if y - 8 > 20 else min(img_h - 5, y + 20)
-                        
-                            # Draw text background
-                            cv2.rectangle(processed, (label_x - 5, label_y - label_size[1] - 5),
-                                         (label_x + label_size[0] + 5, label_y + 5), label_color, -1)
-                        
-                            # Draw text
-                            cv2.putText(processed, label, (label_x, label_y),
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                        
-                            # Log for debugging
-                            if self.frame_count % 30 == 0:
-                                print(f"[DETECTION] Person #{person_id} at ({x},{y}) size={x2-x}x{y2-y}, falling={person_falling}")
+                                color = person_color  # Use assigned color
+                            
+                            # Draw skeleton directly from YOLOv11 keypoints
+                            draw_skeleton_yolo(processed, person_keypoints, color=color, thickness=2)
 
                 with shared_frames[self.camera_id]["lock"]:
                     shared_frames[self.camera_id]["frame"] = processed
@@ -1385,12 +1215,18 @@ class CameraProcessor(threading.Thread):
                     self.current_fps = self.frame_count / (time.time() - self.last_fps_update)
                     self.frame_count = 0
                     self.last_fps_update = time.time()
+                    # Only print FPS if very low
+                    if self.current_fps < 10:
+                        print(f"[FPS] {self.name}: {self.current_fps:.1f} fps")
                     
                     # Adaptive frame skipping for video files based on performance
-                    if is_video_file and self.current_fps < 15:
-                        frame_skip = 0
-                    elif is_video_file and self.current_fps > 25:
-                        frame_skip = 1
+                    if is_video_file:
+                        if self.current_fps < 12:
+                            # Low FPS - skip MORE frames
+                            frame_skip = min(3, frame_skip + 1)
+                        elif self.current_fps > 30:
+                            # High FPS - skip FEWER frames
+                            frame_skip = max(0, frame_skip - 1)
 
                 processing_time = time.time() - start_time
                 if is_video_file:
@@ -1410,8 +1246,6 @@ class CameraProcessor(threading.Thread):
             traceback.print_exc()
         finally:
             try:
-                if self.mp_pose_instance: 
-                    self.mp_pose_instance.close()
                 if self.cap: 
                     self.cap.release()
             except Exception as e:
@@ -1438,7 +1272,7 @@ class CameraProcessor(threading.Thread):
         # Save snapshot as file instead of base64 to reduce JSON size
         snapshot_filename = f"{incident_id}_{timestamp.replace(':', '-').replace(' ', '_')}.jpg"
         snapshot_path = os.path.join(SNAPSHOTS_DIR, snapshot_filename)
-        cv2.imwrite(snapshot_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 60])  # Reduced quality to save space
+        cv2.imwrite(snapshot_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
         
         person_label = f"Person #{person_id}" if person_id else "Detected Person"
         
@@ -1452,7 +1286,7 @@ class CameraProcessor(threading.Thread):
             "person_label": person_label,
             "confidence": float(fall_probability),
             "severity": "HIGH" if fall_probability > 0.8 else "MEDIUM" if fall_probability > 0.6 else "LOW",
-            "snapshot_file": snapshot_filename,  # Store filename instead of base64
+            "snapshot_file": snapshot_filename,
             "notes": "",
             "location": f"{self.name} - {person_label}" if person_id else self.name
         }
@@ -1506,7 +1340,7 @@ def generate_mjpeg(camera_id):
             ret, jpeg = cv2.imencode('.jpg', placeholder)
             frame_bytes = jpeg.tobytes()
         else:
-            # Optimized: Lower quality (75) and higher compression for faster streaming
+            # Optimized: Lower quality for faster streaming
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
             ret, jpeg = cv2.imencode('.jpg', frame, encode_param)
             frame_bytes = jpeg.tobytes()
@@ -1520,6 +1354,11 @@ def generate_mjpeg(camera_id):
 @app.route('/')
 def index():
     return send_from_directory('app', 'index.html')
+
+@app.route('/static/<path:filepath>')
+def serve_static(filepath):
+    """Serve static files (images, CSS, JS)"""
+    return send_from_directory('app/static', filepath)
 
 @app.route('/video_feed/<camera_id>')
 def video_feed(camera_id):
@@ -1563,7 +1402,7 @@ def snapshot(camera_id):
     ret, jpeg = cv2.imencode('.jpg', frame, encode_param)
     return Response(jpeg.tobytes(), mimetype='image/jpeg')
 
-# Add website alerts API endpoint - FIXED: Proper initialization and cleanup
+# Add website alerts API endpoint
 @app.route('/api/alerts/active', methods=['GET'])
 def api_get_active_alerts():
     """
@@ -1629,12 +1468,18 @@ def api_admin_check():
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def api_settings():
-    if not session.get('admin_authenticated', False):
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    # GET requests are allowed without authentication (for loading current settings)
+    # POST requests still require authentication for most settings, but privacy settings are allowed
     
     if request.method == 'POST':
         data = request.get_json() or {}
         message = []
+        
+        # Check if user is trying to modify sensitive settings (requires auth)
+        has_sensitive_changes = any(key in data for key in ['fall_threshold', 'fall_delay_seconds', 'alert_cooldown_seconds'])
+        
+        if has_sensitive_changes and not session.get('admin_authenticated', False):
+            return jsonify({"success": False, "message": "Authentication required for these settings"}), 401
         
         new_threshold = data.get('fall_threshold')
         if new_threshold is not None:
@@ -1679,7 +1524,7 @@ def api_settings():
                 return jsonify({"success": False, "message": "Invalid cooldown value"}), 400
         
         new_privacy_mode = data.get('privacy_mode')
-        if new_privacy_mode in ['full_video', 'skeleton_only', 'blurred', 'alerts_only']:
+        if new_privacy_mode in ['full_video', 'skeleton_only', 'blurred', 'alerts_only', 'no_overlay']:
             GLOBAL_SETTINGS['privacy_mode'] = new_privacy_mode
             message.append("Privacy mode updated")
         
@@ -1697,19 +1542,43 @@ def api_settings():
             except ValueError:
                 return jsonify({"success": False, "message": "Invalid buffer value"}), 400
 
-        new_hide_overlays = data.get('hide_overlays')
-        if new_hide_overlays is not None:
-            if isinstance(new_hide_overlays, bool):
-                GLOBAL_SETTINGS['hide_overlays'] = new_hide_overlays
-            elif isinstance(new_hide_overlays, (int, float)):
-                GLOBAL_SETTINGS['hide_overlays'] = bool(new_hide_overlays)
-            elif isinstance(new_hide_overlays, str):
-                GLOBAL_SETTINGS['hide_overlays'] = new_hide_overlays.strip().lower() in ("1", "true", "yes", "on")
-            else:
-                GLOBAL_SETTINGS['hide_overlays'] = bool(new_hide_overlays)
-            message.append("Overlay drawing updated")
+        new_pose_conf = data.get('pose_confidence')
+        if new_pose_conf is not None:
+            try:
+                new_pose_conf = float(new_pose_conf)
+                if 0.05 <= new_pose_conf <= 0.9:
+                    GLOBAL_SETTINGS['pose_confidence'] = new_pose_conf
+                    message.append("Pose confidence updated")
+                else:
+                    return jsonify({"success": False, "message": "Pose confidence must be 0.05-0.9"}), 400
+            except ValueError:
+                return jsonify({"success": False, "message": "Invalid pose confidence"}), 400
 
-        return jsonify({"success": True, "message": " ".join(message), "settings": GLOBAL_SETTINGS})
+        new_pose_iou = data.get('pose_iou')
+        if new_pose_iou is not None:
+            try:
+                new_pose_iou = float(new_pose_iou)
+                if 0.1 <= new_pose_iou <= 0.9:
+                    GLOBAL_SETTINGS['pose_iou'] = new_pose_iou
+                    message.append("Pose IoU updated")
+                else:
+                    return jsonify({"success": False, "message": "Pose IoU must be 0.1-0.9"}), 400
+            except ValueError:
+                return jsonify({"success": False, "message": "Invalid pose IoU"}), 400
+
+        new_pose_max_people = data.get('pose_max_people')
+        if new_pose_max_people is not None:
+            try:
+                new_pose_max_people = int(new_pose_max_people)
+                if 1 <= new_pose_max_people <= 5:
+                    GLOBAL_SETTINGS['pose_max_people'] = new_pose_max_people
+                    message.append("Pose max people updated")
+                else:
+                    return jsonify({"success": False, "message": "Pose max people must be 1-5"}), 400
+            except ValueError:
+                return jsonify({"success": False, "message": "Invalid pose max people"}), 400
+
+        return jsonify({"success": True, "message": " ".join(message) if message else "No changes", "settings": GLOBAL_SETTINGS})
     
     response_data = {"success": True, "settings": GLOBAL_SETTINGS}
     
@@ -1867,7 +1736,7 @@ def api_telegram_unblock():
         else:
             return jsonify({"success": False, "message": "User not in blocked list"}), 400
 
-# Camera Management Routes - FIXED: Better camera status detection
+# Camera Management Routes
 @app.route('/api/cameras', methods=['GET'])
 def api_get_cameras():
     cameras = []
@@ -1913,6 +1782,21 @@ def api_get_cameras():
             })
     
     return jsonify({"success": True, "cameras": cameras})
+
+@app.route('/api/cameras/scan', methods=['GET'])
+def api_scan_cameras():
+    try:
+        max_index = int(request.args.get('max_index', 5))
+    except ValueError:
+        return jsonify({"success": False, "message": "max_index must be an integer"}), 400
+    max_index = max(0, min(max_index, 15))
+    available = scan_available_cameras(max_index)
+    return jsonify({
+        "success": True,
+        "count": len(available),
+        "max_index": max_index,
+        "devices": available
+    })
 
 @app.route('/api/cameras/all_definitions', methods=['GET'])
 def api_get_all_definitions():
@@ -2108,6 +1992,23 @@ def api_get_incidents():
         return jsonify({"success": False, "message": "Unauthorized"}), 401
     
     return jsonify({"success": True, "incidents": INCIDENT_REPORTS})
+
+@app.route('/api/incidents/<incident_id>', methods=['GET'])
+def api_get_incident(incident_id):
+    if not session.get('admin_authenticated', False):
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    
+    incident = next((inc for inc in INCIDENT_REPORTS if inc['id'] == incident_id), None)
+    if not incident:
+        return jsonify({"success": False, "message": "Incident not found"}), 404
+    
+    # Ensure required fields for PDF preview
+    if 'camera' not in incident:
+        incident['camera'] = incident.get('camera_name', 'Unknown')
+    if 'location' not in incident:
+        incident['location'] = incident.get('camera_name', 'Unknown')
+    
+    return jsonify({"success": True, "incident": incident})
 
 @app.route('/api/incidents/<incident_id>/pdf', methods=['GET'])
 def api_generate_incident_pdf(incident_id):
@@ -2419,7 +2320,7 @@ if __name__ == '__main__':
     print(f"\n[STARTUP] Initializing default camera: {DEFAULT_CAMERA_NAME}")
     print(f"[INFO] Source: {DEFAULT_CAMERA_SOURCE}")
     print(f"[INFO] Model: {'LSTM' if LSTM_MODEL else 'Heuristic-based'}")
-    print(f"[INFO] MediaPipe: {'Enabled' if USE_MEDIAPIPE else 'Disabled'}")
+    print(f"[INFO] Detection: YOLOv11n-pose (20-30% faster, more accurate)")
     print(f"[INFO] Admin Password: {ADMIN_PASSWORD}")
     print(f"[INFO] Telegram: Bot listener started")
     print(f"[INFO] Privacy Modes: Enabled")
