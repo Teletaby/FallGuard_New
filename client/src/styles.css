@@ -12,17 +12,6 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Ensure nav is clickable on landing page */
-nav {
-  pointer-events: auto !important;
-  z-index: 30 !important;
-  position: relative;
-}
-
-nav button {
-  pointer-events: auto !important;
-}
-
 .live-indicator {
   animation: pulse-red 1.5s infinite;
 }
