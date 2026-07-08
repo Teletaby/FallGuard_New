@@ -148,8 +148,8 @@ body {
   z-index: 0;
 }
 
-/* Ensure all content in hero is above the overlay */
-.hero-section > * {
+/* Ensure hero content is above the overlay without overriding nav positioning */
+.hero-section > *:not(.hero-nav) {
   position: relative;
   z-index: 10;
 }

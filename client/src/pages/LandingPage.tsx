@@ -18,7 +18,7 @@ function LandingPage() {
     <div className="bg-gray-900 text-white">
       {activePage === 'landing' ? (
         <div id="landing-page" className="hero-section gradient-bg">
-          <nav className="absolute top-0 left-0 right-0 z-20 px-6 py-4 bg-gradient-to-b from-black/50 to-transparent">
+          <nav className="hero-nav absolute top-0 left-0 right-0 z-20 px-6 py-4 bg-gradient-to-b from-black/50 to-transparent">
             <div className="container mx-auto flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img
@@ -56,15 +56,12 @@ function LandingPage() {
 
           <div className="container mx-auto px-6 relative z-10">
             <div className="text-center max-w-5xl mx-auto fade-in">
-              <div className="mb-12">
-                <svg className="w-32 h-32 mx-auto text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
+              <div className="mb-12 flex justify-center">
+                <img
+                  src="/static/images/fallguard-logo.svg"
+                  alt="FallGuard Logo"
+                  className="h-28 w-28 drop-shadow-2xl"
+                />
               </div>
 
               <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl">
@@ -100,16 +97,11 @@ function LandingPage() {
           <nav className="sticky top-0 z-20 px-6 py-4 bg-gray-800 shadow-lg">
             <div className="container mx-auto flex items-center justify-between">
               <button onClick={goToHomepage} className="flex items-center gap-3 hover:opacity-80 transition">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
+                <img
+                  src="/static/images/fallguard-logo.svg"
+                  alt="FallGuard Logo"
+                  className="h-10 w-10"
+                />
                 <span className="text-xl font-bold">FallGuard</span>
               </button>
               <button onClick={goToLiveFeed} className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg font-semibold transition">
