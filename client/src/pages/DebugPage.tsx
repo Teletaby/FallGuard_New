@@ -15,14 +15,9 @@ function DebugPage() {
   }
 
   const testAPI = async () => {
-    log('Testing API connection...')
-    try {
-      const response = await fetch('/api/admin/check')
-      const data = await response.json()
-      log(`✓ API Response: ${JSON.stringify(data)}`)
-    } catch (error) {
-      log(`✗ API Error: ${(error as Error).message}`)
-    }
+    log('Testing local-only mode...')
+    log(`✓ Admin auth stored locally: ${window.localStorage.getItem('fallguard_admin_authenticated') === 'true'}`)
+    log('✓ No backend request was sent')
   }
 
   return (

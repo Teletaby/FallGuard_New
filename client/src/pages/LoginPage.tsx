@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
+const ADMIN_AUTH_KEY = 'fallguard_admin_authenticated'
+const ADMIN_PASSWORD = 'admin'
+
 function LoginPage() {
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
@@ -9,22 +12,13 @@ function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    const checkAdminAuth = async () => {
-      try {
-        const response = await fetch('/api/admin/check')
-        const data = await response.json()
-        if (data.authenticated === true) {
-          navigate('/dashboard', { replace: true })
-          return
-        }
-      } catch {
-        // ignore
-      } finally {
-        setIsChecking(false)
-      }
+    const isAuthenticated = window.localStorage.getItem(ADMIN_AUTH_KEY) === 'true'
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+      return
     }
 
-    checkAdminAuth()
+    setIsChecking(false)
   }, [navigate])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -33,18 +27,13 @@ function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      })
-
-      if (!response.ok) {
+      if (password !== ADMIN_PASSWORD) {
         setError('Invalid password')
         setPassword('')
         return
       }
 
+      window.localStorage.setItem(ADMIN_AUTH_KEY, 'true')
       navigate('/dashboard')
     } catch {
       setError('Login failed')

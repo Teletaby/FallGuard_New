@@ -49,8 +49,255 @@ const defaultSettings: Settings = {
   hide_overlays: true
 }
 
+const ADMIN_AUTH_KEY = 'fallguard_admin_authenticated'
+const ADMIN_PASSWORD = 'admin'
+
+const dashboardThemeStyles = `
+  .dashboard-theme-light {
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #0f172a;
+  }
+  .dashboard-theme-light .bg-gray-900,
+  .dashboard-theme-light .bg-gray-800 {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid transparent !important;
+    box-shadow: inset 0 0 0 1px #dbe4ee !important;
+  }
+  .dashboard-theme-light .bg-gray-700,
+  .dashboard-theme-light .bg-gray-600 {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+  }
+  .dashboard-theme-light .bg-gray-800\/40 {
+    background-color: rgba(255, 255, 255, 0.75) !important;
+  }
+  .dashboard-theme-light .text-white {
+    color: #0f172a !important;
+  }
+  .dashboard-theme-light .text-gray-300 {
+    color: #334155 !important;
+  }
+  .dashboard-theme-light .text-gray-400 {
+    color: #64748b !important;
+  }
+  .dashboard-theme-light .text-gray-500 {
+    color: #94a3b8 !important;
+  }
+  .dashboard-theme-light .border-gray-700,
+  .dashboard-theme-light .border-gray-600 {
+    border-color: #dbe4ee !important;
+  }
+  .dashboard-theme-light .hover\:bg-gray-700:hover,
+  .dashboard-theme-light .hover\:bg-gray-600:hover {
+    background-color: #e2e8f0 !important;
+  }
+  .dashboard-theme-light .hover\:text-white:hover {
+    color: #0f172a !important;
+  }
+  .dashboard-theme-light .theme-toggle-button {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+  .dashboard-theme-light .theme-toggle-button:hover {
+    background-color: #f8fafc !important;
+  }
+  .dashboard-theme-light .bg-blue-600,
+  .dashboard-theme-light .bg-green-600,
+  .dashboard-theme-light .bg-red-600,
+  .dashboard-theme-light .bg-yellow-600,
+  .dashboard-theme-light .bg-purple-600 {
+    color: #ffffff !important;
+  }
+  .dashboard-theme-light .bg-black\/70 {
+    background-color: rgba(15, 23, 42, 0.2) !important;
+  }
+  .dashboard-theme-light .overflow-y-auto,
+  .dashboard-theme-light .overflow-auto,
+  .dashboard-theme-light .overflow-scroll {
+    scrollbar-gutter: stable;
+  }
+  .dashboard-theme-night .overflow-y-auto,
+  .dashboard-theme-night .overflow-auto,
+  .dashboard-theme-night .overflow-scroll {
+    scrollbar-gutter: stable;
+  }
+  .dashboard-theme-night .bg-gray-900,
+  .dashboard-theme-night .bg-gray-800 {
+    border: 1px solid transparent !important;
+  }
+  .dashboard-theme-night .theme-toggle-button {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+    border-color: #64748b !important;
+  }
+  .dashboard-theme-night .theme-toggle-button:hover {
+    background-color: #475569 !important;
+    border-color: #94a3b8 !important;
+  }
+  .dashboard-theme-light .rounded-xl,
+  .dashboard-theme-light .rounded-2xl,
+  .dashboard-theme-light .rounded-lg {
+    box-shadow: inset 0 0 0 1px #dbe4ee, 0 12px 30px rgba(15, 23, 42, 0.06) !important;
+  }
+  .dashboard-theme-light .shadow-2xl,
+  .dashboard-theme-light .shadow-xl,
+  .dashboard-theme-light .shadow-lg {
+    box-shadow: inset 0 0 0 1px #dbe4ee, 0 20px 45px rgba(15, 23, 42, 0.1) !important;
+  }
+`
+
+const buildThemeToggleLabel = (theme: 'light' | 'night') => (theme === 'light' ? 'Night Mode' : 'Light Mode')
+
+const localBackend = {
+  settings: { ...defaultSettings },
+  telegramToken: '',
+  telegramBotName: 'FallGuard Local Bot',
+  cameras: [
+    {
+      id: 'main_webcam_0',
+      name: 'Main Webcam',
+      status: 'Active',
+      color: 'green',
+      isLive: true,
+      confidence_score: 0.82,
+      fps: 29.8,
+      source: 'Local webcam 0'
+    },
+    {
+      id: 'hallway_cam_1',
+      name: 'Hallway Camera',
+      status: 'Monitoring',
+      color: 'green',
+      isLive: true,
+      confidence_score: 0.41,
+      fps: 24.3,
+      source: 'rtsp://local/hallway'
+    }
+  ] as Camera[],
+  subscribers: [
+    { chat_id: '10001', name: 'Local Admin', username: 'admin' },
+    { chat_id: '10002', name: 'Nurse Station', username: 'nurse_station' }
+  ] as TelegramSubscriber[],
+  blocked: ['10003'],
+  incidents: [
+    {
+      id: 'INC-1001',
+      timestamp: '2026-07-08 09:15:00',
+      severity: 'HIGH',
+      location: 'Main Hall',
+      confidence: 0.94,
+      notes: 'Local sample incident for offline mode.'
+    },
+    {
+      id: 'INC-1002',
+      timestamp: '2026-07-08 10:42:00',
+      severity: 'MEDIUM',
+      location: 'Stairwell',
+      confidence: 0.73
+    }
+  ] as Incident[]
+}
+
+const cloneCamera = (camera: Camera): Camera => ({ ...camera })
+const cloneSubscriber = (subscriber: TelegramSubscriber): TelegramSubscriber => ({ ...subscriber })
+const cloneIncident = (incident: Incident): Incident => ({ ...incident })
+
+const buildPlaceholderFeed = (title: string, subtitle: string) => {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#111827" />
+          <stop offset="100%" stop-color="#1f2937" />
+        </linearGradient>
+      </defs>
+      <rect width="1280" height="720" fill="url(#g)" />
+      <rect x="72" y="72" width="1136" height="576" rx="28" fill="#0f172a" stroke="#334155" stroke-width="4" />
+      <text x="640" y="320" text-anchor="middle" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="700">${title}</text>
+      <text x="640" y="390" text-anchor="middle" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="30">${subtitle}</text>
+      <text x="640" y="490" text-anchor="middle" fill="#38bdf8" font-family="Inter, Arial, sans-serif" font-size="22" letter-spacing="3">LOCAL VIEW · NO API</text>
+    </svg>
+  `
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+const escapePdfText = (value: string) => value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+
+const buildIncidentPdf = (incident: Incident, subscribers: TelegramSubscriber[]) => {
+  const lines = [
+    'FALL DETECTION INCIDENT REPORT',
+    `Incident ID: ${incident.id}`,
+    `Timestamp: ${incident.timestamp}`,
+    `Severity: ${incident.severity}`,
+    `Location: ${incident.location}`,
+    `Confidence: ${(incident.confidence * 100).toFixed(1)}%`,
+    `Notes: ${incident.notes || 'None'}`,
+    '',
+    'Telegram recipients:',
+    ...(subscribers.length > 0
+      ? subscribers.map((subscriber) => `${subscriber.name || 'Unknown'} - ${subscriber.chat_id}`)
+      : ['No subscribers configured'])
+  ]
+
+  const content = [
+    'BT',
+    '/F1 18 Tf',
+    '50 760 Td',
+    `(${escapePdfText(lines[0])}) Tj`
+  ]
+
+  let yOffset = 730
+  for (const line of lines.slice(1)) {
+    if (line === '') {
+      yOffset -= 14
+      continue
+    }
+
+    content.push('/F1 11 Tf')
+    content.push(`50 ${yOffset} Td`)
+    content.push(`(${escapePdfText(line)}) Tj`)
+    yOffset -= 22
+  }
+
+  content.push('ET')
+  const contentStream = content.join('\n')
+
+  const objects = [
+    '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+    '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+    '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj',
+    '4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+    `5 0 obj << /Length ${contentStream.length} >> stream\n${contentStream}\nendstream endobj`
+  ]
+
+  const header = '%PDF-1.4\n'
+  let body = ''
+  const offsets = [0]
+
+  for (const object of objects) {
+    offsets.push(header.length + body.length)
+    body += `${object}\n`
+  }
+
+  const xrefStart = header.length + body.length
+  const xref = ['xref', '0 6', '0000000000 65535 f ']
+  for (let index = 1; index < offsets.length; index += 1) {
+    xref.push(`${String(offsets[index]).padStart(10, '0')} 00000 n `)
+  }
+
+  const trailer = ['trailer << /Size 6 /Root 1 0 R >>', 'startxref', String(xrefStart), '%%EOF']
+  return `${header}${body}${xref.join('\n')}\n${trailer.join('\n')}`
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
+  const [theme, setTheme] = useState<'light' | 'night'>(() => {
+    if (typeof window === 'undefined') return 'light'
+    return (window.localStorage.getItem('fallguard_dashboard_theme') as 'light' | 'night' | null) || 'light'
+  })
   const [cameras, setCameras] = useState<Camera[]>([])
   const [mainStreamId, setMainStreamId] = useState('main_webcam_0')
   const [mainStreamError, setMainStreamError] = useState(false)
@@ -90,7 +337,7 @@ function DashboardPage() {
   const alertMapRef = useRef<Map<string, { cameraId: string; timestamp: number }>>(new Map())
   const pollingRef = useRef<number | null>(null)
   const alertPollingRef = useRef<number | null>(null)
-  const uploadXhrRef = useRef<XMLHttpRequest | null>(null)
+  const uploadTimerRef = useRef<number | null>(null)
 
   const mainCamera = useMemo(
     () => cameras.find((cam) => cam.id === mainStreamId),
@@ -120,23 +367,216 @@ function DashboardPage() {
     }
   }, [showTelegramSubscribers])
 
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    const response = await fetch(`/api${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options
-    })
+  useEffect(() => {
+    setIsAdminAuthenticated(window.localStorage.getItem(ADMIN_AUTH_KEY) === 'true')
+  }, [])
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        setIsAdminAuthenticated(false)
-        setShowAdminPanel(false)
-        setShowCameraManager(false)
-        throw new Error('Unauthorized')
+  useEffect(() => {
+    window.localStorage.setItem('fallguard_dashboard_theme', theme)
+  }, [theme])
+
+  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+    const method = (options.method || 'GET').toUpperCase()
+    const rawBody = options.body
+    const body = rawBody instanceof FormData
+      ? Object.fromEntries(Array.from(rawBody.entries()))
+      : typeof rawBody === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(rawBody)
+          } catch {
+            return {}
+          }
+        })()
+      : {}
+
+    if (endpoint === '/settings') {
+      if (method === 'POST') {
+        localBackend.settings = {
+          ...localBackend.settings,
+          ...(body.fall_threshold !== undefined ? { fall_threshold: Number(body.fall_threshold) } : {}),
+          ...(body.fall_delay_seconds !== undefined ? { fall_delay_seconds: Number(body.fall_delay_seconds) } : {}),
+          ...(body.privacy_mode !== undefined ? { privacy_mode: String(body.privacy_mode) } : {}),
+          ...(body.pre_fall_buffer_seconds !== undefined ? { pre_fall_buffer_seconds: Number(body.pre_fall_buffer_seconds) } : {}),
+          ...(body.hide_overlays !== undefined ? { hide_overlays: Boolean(body.hide_overlays) } : {})
+        }
+        return { success: true, settings: { ...localBackend.settings } }
       }
-      throw new Error(`API Error: ${response.status}`)
+
+      return {
+        success: true,
+        settings: { ...localBackend.settings },
+        telegram_token: Boolean(localBackend.telegramToken),
+        telegram_bot_name: localBackend.telegramBotName
+      }
     }
 
-    return response.json()
+    if (endpoint === '/alerts/active') {
+      return {
+        success: true,
+        alerts: localBackend.cameras
+          .filter((camera) => camera.color === 'red' && camera.isLive)
+          .map((camera) => ({
+            camera_id: camera.id,
+            camera_name: camera.name,
+            confidence: camera.confidence_score,
+            timestamp: Math.floor(Date.now() / 1000)
+          }))
+      }
+    }
+
+    if (endpoint === '/telegram/set_token' && method === 'POST') {
+      localBackend.telegramToken = String(body.token || '').trim()
+      return { success: Boolean(localBackend.telegramToken), message: 'Telegram bot token saved', bot_username: 'local_bot' }
+    }
+
+    if (endpoint === '/telegram/test_alert' && method === 'POST') {
+      if (!localBackend.telegramToken) {
+        return { success: false, message: 'Telegram bot not configured' }
+      }
+
+      if (localBackend.subscribers.length === 0) {
+        return { success: false, message: 'No subscribers' }
+      }
+
+      return { success: true, message: 'Test alerts sent', sent_count: localBackend.subscribers.length }
+    }
+
+    if (endpoint === '/telegram/subscribers') {
+      return { success: true, subscribers: localBackend.subscribers.map(cloneSubscriber) }
+    }
+
+    if (endpoint === '/telegram/add_subscriber' && method === 'POST') {
+      const chatId = String(body.chat_id || '').trim()
+      const name = String(body.name || 'Manual Entry').trim()
+      if (!chatId) {
+        return { success: false, message: 'Chat ID is required' }
+      }
+
+      if (localBackend.subscribers.some((subscriber) => subscriber.chat_id === chatId)) {
+        return { success: false, message: 'Subscriber already exists' }
+      }
+
+      localBackend.subscribers.push({ chat_id: chatId, name, username: '' })
+      return { success: true, message: 'Subscriber added' }
+    }
+
+    if (endpoint === '/telegram/remove_subscriber' && method === 'POST') {
+      const chatId = String(body.chat_id || '').trim()
+      localBackend.subscribers = localBackend.subscribers.filter((subscriber) => subscriber.chat_id !== chatId)
+      if (chatId && !localBackend.blocked.includes(chatId)) {
+        localBackend.blocked.push(chatId)
+      }
+      return { success: true, message: 'Subscriber removed' }
+    }
+
+    if (endpoint === '/telegram/blocked') {
+      return { success: true, blocked: [...localBackend.blocked] }
+    }
+
+    if (endpoint === '/telegram/unblock' && method === 'POST') {
+      const chatId = String(body.chat_id || '').trim()
+      localBackend.blocked = localBackend.blocked.filter((blockedId) => blockedId !== chatId)
+      return { success: true, message: 'User unblocked' }
+    }
+
+    if (endpoint === '/cameras') {
+      return { success: true, cameras: localBackend.cameras.map(cloneCamera) }
+    }
+
+    if (endpoint === '/cameras/all_definitions') {
+      return { success: true, definitions: localBackend.cameras.map(cloneCamera) }
+    }
+
+    if (endpoint === '/cameras/add' && method === 'POST') {
+      const name = String(body.name || '').trim()
+      const source = String(body.source || '').trim()
+      const cameraId = `cam_${Math.random().toString(36).slice(2, 10)}`
+      localBackend.cameras.push({
+        id: cameraId,
+        name,
+        status: 'Monitoring',
+        color: 'green',
+        isLive: true,
+        confidence_score: 0.18,
+        fps: 24,
+        source
+      })
+      return { success: true, message: `Camera '${name}' added`, camera_id: cameraId }
+    }
+
+    if (endpoint.startsWith('/cameras/stop/') && method === 'POST') {
+      const cameraId = endpoint.split('/').pop() || ''
+      const camera = localBackend.cameras.find((item) => item.id === cameraId)
+      if (!camera) {
+        return { success: false, message: 'Camera not found' }
+      }
+
+      camera.isLive = false
+      camera.status = 'Offline'
+      camera.color = 'gray'
+      camera.fps = 0
+      return { success: true, message: 'Camera stopped' }
+    }
+
+    if (endpoint.startsWith('/cameras/remove/') && method === 'DELETE') {
+      const cameraId = endpoint.split('/').pop() || ''
+      localBackend.cameras = localBackend.cameras.filter((camera) => camera.id !== cameraId)
+      return { success: true, message: 'Camera removed' }
+    }
+
+    if (endpoint === '/cameras/add_existing' && method === 'POST') {
+      const cameraId = String(body.camera_id || '').trim()
+      const camera = localBackend.cameras.find((item) => item.id === cameraId)
+      if (!camera) {
+        return { success: false, message: 'Camera not found' }
+      }
+
+      camera.isLive = true
+      camera.status = 'Monitoring'
+      camera.color = camera.color === 'gray' ? 'green' : camera.color
+      camera.fps = camera.fps || 24
+      return { success: true, message: 'Camera restarted' }
+    }
+
+    if (endpoint === '/cameras/upload' && method === 'POST') {
+      const name = String(body.get?.('name') || body.name || 'Uploaded Video')
+      const cameraId = `cam_${Math.random().toString(36).slice(2, 10)}`
+      localBackend.cameras.push({
+        id: cameraId,
+        name,
+        status: 'Processing',
+        color: 'green',
+        isLive: true,
+        confidence_score: 0.22,
+        fps: 18,
+        source: 'Uploaded video file'
+      })
+      return { success: true, message: `Video '${name}' uploaded successfully`, camera_id: cameraId }
+    }
+
+    if (endpoint === '/incidents') {
+      return { success: true, incidents: localBackend.incidents.map(cloneIncident) }
+    }
+
+    if (endpoint.startsWith('/incidents/') && endpoint.endsWith('/notes') && method === 'POST') {
+      const incidentId = endpoint.split('/')[2]
+      const incident = localBackend.incidents.find((item) => item.id === incidentId)
+      if (!incident) {
+        return { success: false, message: 'Incident not found' }
+      }
+
+      incident.notes = String(body.notes || '')
+      return { success: true, message: 'Notes updated' }
+    }
+
+    if (endpoint.startsWith('/incidents/') && method === 'DELETE') {
+      const incidentId = endpoint.split('/')[2]
+      localBackend.incidents = localBackend.incidents.filter((incident) => incident.id !== incidentId)
+      return { success: true, message: 'Incident deleted' }
+    }
+
+    return { success: true }
   }
 
   const showToast = (message: string, type: Toast['type'] = 'success') => {
@@ -181,8 +621,7 @@ function DashboardPage() {
 
   const checkForWebsiteAlerts = async () => {
     try {
-      const response = await fetch('/api/alerts/active')
-      const data = await response.json()
+      const data = await apiCall('/alerts/active')
 
       if (data.success && Array.isArray(data.alerts)) {
         data.alerts.forEach((alert: { camera_id: string; camera_name: string; confidence: number; timestamp: number }) => {
@@ -302,14 +741,9 @@ function DashboardPage() {
   }
 
   const checkAdminAuth = async () => {
-    try {
-      const response = await fetch('/api/admin/check')
-      const data = await response.json()
-      setIsAdminAuthenticated(data.authenticated)
-      return data.authenticated
-    } catch {
-      return false
-    }
+    const authenticated = window.localStorage.getItem(ADMIN_AUTH_KEY) === 'true'
+    setIsAdminAuthenticated(authenticated)
+    return authenticated
   }
 
   const openAdminPanel = async () => {
@@ -333,36 +767,27 @@ function DashboardPage() {
   const closeAdminPanel = () => setShowAdminPanel(false)
 
   const logoutAdmin = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' })
-      setIsAdminAuthenticated(false)
-      setShowAdminPanel(false)
-      showToast('Logged out successfully', 'info')
-    } catch {
-      showToast('Logout failed', 'error')
-    }
+    window.localStorage.removeItem(ADMIN_AUTH_KEY)
+    setIsAdminAuthenticated(false)
+    setShowAdminPanel(false)
+    showToast('Logged out successfully', 'info')
   }
 
   const submitAdminLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: adminPassword })
-      })
-      const data = await response.json()
-
-      if (data.success) {
-        setIsAdminAuthenticated(true)
-        setShowAdminLogin(false)
-        setAdminPassword('')
-        await openAdminPanel()
-        showToast('Login successful', 'success')
-      } else {
+      if (adminPassword !== ADMIN_PASSWORD) {
         showToast('Invalid password', 'error')
         setAdminPassword('')
+        return
       }
+
+      window.localStorage.setItem(ADMIN_AUTH_KEY, 'true')
+      setIsAdminAuthenticated(true)
+      setShowAdminLogin(false)
+      setAdminPassword('')
+      await openAdminPanel()
+      showToast('Login successful', 'success')
     } catch {
       showToast('Login failed', 'error')
     }
@@ -599,24 +1024,22 @@ function DashboardPage() {
 
   const generateIncidentPDF = async (incidentId: string) => {
     try {
-      const response = await fetch(`/api/incidents/${incidentId}/pdf`, {
-        headers: { Accept: 'application/pdf' }
-      })
-
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `incident_${incidentId}.pdf`
-        document.body.appendChild(link)
-        link.click()
-        window.URL.revokeObjectURL(url)
-        link.remove()
-        showToast('PDF report downloaded')
-      } else {
-        showToast('Failed to generate PDF', 'error')
+      const incident = incidents.find((item) => item.id === incidentId)
+      if (!incident) {
+        showToast('Incident not found', 'error')
+        return
       }
+
+      const pdfBlob = new Blob([buildIncidentPdf(incident, adminSubscribers)], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `incident_${incidentId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(url)
+      link.remove()
+      showToast('PDF report downloaded')
     } catch {
       showToast('Error generating PDF', 'error')
     }
@@ -697,7 +1120,7 @@ function DashboardPage() {
     if (!confirm('Permanently remove this camera? This cannot be undone.')) return
 
     try {
-      await fetch(`/api/cameras/remove/${id}`, { method: 'DELETE' })
+      await apiCall(`/cameras/remove/${id}`, { method: 'DELETE' })
       showToast('Camera removed')
 
       if (mainStreamId === id) {
@@ -734,72 +1157,55 @@ function DashboardPage() {
     formData.append('name', uploadName)
     formData.append('video_file', uploadFile)
 
-    const xhr = new XMLHttpRequest()
-    uploadXhrRef.current = xhr
-    xhr.timeout = 300000
+    if (uploadTimerRef.current) {
+      window.clearInterval(uploadTimerRef.current)
+    }
 
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) {
-        const percentComplete = (event.loaded / event.total) * 100
-        setUploadProgress({ percent: percentComplete, text: `Uploading: ${Math.round(percentComplete)}%` })
-      }
-    })
+    let percentComplete = 0
+    uploadTimerRef.current = window.setInterval(() => {
+      percentComplete = Math.min(percentComplete + 20, 95)
+      setUploadProgress({ percent: percentComplete, text: `Uploading: ${Math.round(percentComplete)}%` })
+    }, 120)
 
-    xhr.addEventListener('load', () => {
+    window.setTimeout(async () => {
       try {
-        const data = JSON.parse(xhr.responseText)
-        if (xhr.status === 200 && data.success) {
-          setUploadProgress({ percent: 100, text: 'Processing video...' })
-          showToast('Video uploaded successfully!', 'success')
-          setUploadName('')
-          setUploadFile(null)
-          setTimeout(() => {
-            loadCameras()
-            loadCameraStatusList()
-            setIsUploading(false)
-            if (data.camera_id) {
-              switchMainFeed(data.camera_id)
-            }
-          }, 1500)
-        } else {
-          showToast(data.message || `Upload failed with status ${xhr.status}`, 'error')
-          setIsUploading(false)
+        const data = await apiCall('/cameras/upload', { method: 'POST', body: formData })
+        setUploadProgress({ percent: 100, text: 'Processing video...' })
+        showToast('Video uploaded successfully!', 'success')
+        setUploadName('')
+        setUploadFile(null)
+        loadCameras()
+        loadCameraStatusList()
+        if (data.camera_id) {
+          switchMainFeed(data.camera_id)
         }
       } catch {
         showToast('Upload response error', 'error')
+      } finally {
+        if (uploadTimerRef.current) {
+          window.clearInterval(uploadTimerRef.current)
+          uploadTimerRef.current = null
+        }
         setIsUploading(false)
       }
-    })
-
-    xhr.addEventListener('error', () => {
-      showToast('Upload failed: Network error or server unreachable', 'error')
-      setIsUploading(false)
-    })
-
-    xhr.addEventListener('abort', () => {
-      showToast('Upload was cancelled', 'warning')
-      setIsUploading(false)
-    })
-
-    xhr.addEventListener('timeout', () => {
-      showToast('Upload timeout: File took too long to upload. Please try again.', 'error')
-      setIsUploading(false)
-    })
-
-    xhr.open('POST', '/api/cameras/upload')
-    xhr.send(formData)
+    }, 700)
   }
 
   const cancelUpload = () => {
-    if (uploadXhrRef.current) {
-      uploadXhrRef.current.abort()
+    if (uploadTimerRef.current) {
+      window.clearInterval(uploadTimerRef.current)
+      uploadTimerRef.current = null
     }
+
+    setIsUploading(false)
+    setUploadProgress({ percent: 0, text: 'Upload cancelled' })
   }
 
   const goToHomepage = () => navigate('/landing')
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4 text-white">
+    <div className={`min-h-screen p-4 ${theme === 'light' ? 'dashboard-theme-light bg-slate-100 text-slate-900' : 'dashboard-theme-night bg-gray-900 text-white'}`}>
+      {theme === 'light' ? <style>{dashboardThemeStyles}</style> : null}
       {globalAlert ? (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl">
           <div className="fall-alert-banner bg-red-600 text-white rounded-lg shadow-2xl mx-4">
@@ -845,6 +1251,12 @@ function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setTheme((prev) => (prev === 'light' ? 'night' : 'light'))}
+            className={`theme-toggle-button px-4 py-2 rounded-lg font-semibold transition border ${theme === 'light' ? 'bg-slate-200 text-slate-900 border-slate-300 hover:bg-slate-100' : 'bg-slate-700 text-slate-100 border-slate-500 hover:bg-slate-600 hover:border-slate-400'}`}
+          >
+            {buildThemeToggleLabel(theme)}
+          </button>
           <div
             className={`status-badge ${
               statusCounts.fallDetections > 0
@@ -886,7 +1298,7 @@ function DashboardPage() {
           <div className="main-feed">
             <img
               id="main-stream-img"
-              src={`/video_feed/${mainStreamId}`}
+              src={buildPlaceholderFeed(mainCamera?.name || 'Main Webcam Stream', mainCamera?.status || 'Active')}
               alt="Main Feed"
               style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
               onLoad={() => setMainStreamError(false)}
@@ -920,7 +1332,7 @@ function DashboardPage() {
             ) : null}
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+          <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-6">
             <h2 className="text-2xl font-bold mb-1">{mainCamera?.name || 'Main Webcam Stream'}</h2>
             <p className="text-gray-300">Status: {mainCamera?.status || 'Active'}</p>
           </div>
@@ -983,7 +1395,7 @@ function DashboardPage() {
                   onClick={() => switchMainFeed(cam.id)}
                 >
                   {cam.isLive ? (
-                    <img src={`/video_feed/${cam.id}`} alt={cam.name} />
+                    <img src={buildPlaceholderFeed(cam.name, cam.status || 'Live')} alt={cam.name} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400">
                       <p>📷 Camera Offline</p>
