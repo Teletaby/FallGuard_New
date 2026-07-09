@@ -193,7 +193,17 @@ const dashboardThemeStyles = `
   }
 `
 
-const buildThemeToggleLabel = (theme: 'light' | 'night') => (theme === 'light' ? 'Night Mode' : 'Light Mode')
+const renderThemeToggleIcon = (theme: 'light' | 'night') =>
+  theme === 'light' ? (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77" />
+    </svg>
+  ) : (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />
+    </svg>
+  )
 
 const getServerBaseUrl = () => {
   const configuredBaseUrl = import.meta.env.VITE_SERVER_BASE_URL ?? import.meta.env.VITE_API_BASE_URL
@@ -1599,12 +1609,6 @@ function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setTheme((prev) => (prev === 'light' ? 'night' : 'light'))}
-            className={`theme-toggle-button px-4 py-2 rounded-lg font-semibold transition border ${theme === 'light' ? 'bg-slate-200 text-slate-900 border-slate-300 hover:bg-slate-100' : 'bg-slate-700 text-slate-100 border-slate-500 hover:bg-slate-600 hover:border-slate-400'}`}
-          >
-            {buildThemeToggleLabel(theme)}
-          </button>
           <div
             className={`status-badge ${
               statusCounts.fallDetections > 0
@@ -1791,8 +1795,16 @@ function DashboardPage() {
               <h2 className="text-2xl font-bold">Admin Panel</h2>
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => setTheme((prev) => (prev === 'light' ? 'night' : 'light'))}
+                  className={`theme-toggle-button w-10 h-10 rounded-full flex items-center justify-center transition border ${theme === 'light' ? 'bg-slate-200 text-slate-900 border-slate-300 hover:bg-slate-100' : 'bg-slate-700 text-slate-100 border-slate-500 hover:bg-slate-600 hover:border-slate-400'}`}
+                  aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+                  title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+                >
+                  {renderThemeToggleIcon(theme)}
+                </button>
+                <button
                   onClick={logoutAdmin}
-                  className="text-sm px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition"
+                  className="mr-2 text-sm px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition"
                 >
                   Logout
                 </button>
