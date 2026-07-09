@@ -35,3 +35,13 @@ class StorageService:
     def list_uploads(self) -> list[dict[str, Any]]:
         with state.lock:
             return list(state.uploads.values())
+
+    def delete_upload(self, upload_id: str) -> bool:
+        with state.lock:
+            record = state.uploads.pop(upload_id, None)
+
+        if record is None:
+            return False
+
+        Path(str(record.get("path", ""))).unlink(missing_ok=True)
+        return True

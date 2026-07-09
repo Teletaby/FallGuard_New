@@ -11,12 +11,14 @@ from app.api.cameras import router as cameras_router
 from app.api.health import router as health_router
 from app.api.incidents import router as incidents_router
 from app.api.pose import router as pose_router
+from app.services import pose_service
 from app.core.config import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.ensure_directories()
+    pose_service.prime()
     yield
 
 

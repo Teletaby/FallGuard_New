@@ -10,6 +10,10 @@ type Camera = {
   confidence_score: number
   fps?: number
   source?: string
+  source_kind?: 'camera' | 'video'
+  preview_url?: string
+  snapshot_url?: string
+  stream_url?: string
 }
 
 type Settings = {
@@ -191,6 +195,15 @@ const dashboardThemeStyles = `
 
 const buildThemeToggleLabel = (theme: 'light' | 'night') => (theme === 'light' ? 'Night Mode' : 'Light Mode')
 
+const getServerBaseUrl = () => {
+  const configuredBaseUrl = import.meta.env.VITE_SERVER_BASE_URL ?? import.meta.env.VITE_API_BASE_URL
+  if (typeof configuredBaseUrl === 'string' && configuredBaseUrl.trim()) {
+    return configuredBaseUrl.replace(/\/$/, '')
+  }
+
+  return 'http://localhost:8000'
+}
+
 const localBackend = {
   settings: { ...defaultSettings },
   telegramToken: '',
@@ -362,6 +375,7 @@ function DashboardPage() {
     cameraName: string
     confidence: number
   } | null>(null)
+  const [serverReachable, setServerReachable] = useState<boolean | null>(null)
   const [uploadProgress, setUploadProgress] = useState({
     percent: 0,
     text: 'Starting upload...'
@@ -374,11 +388,15 @@ function DashboardPage() {
   const [manualChatId, setManualChatId] = useState('')
   const [manualName, setManualName] = useState('')
   const [activeTab, setActiveTab] = useState<'webcam' | 'upload'>('webcam')
+  const [feedRefreshKey, setFeedRefreshKey] = useState(() => Date.now())
 
   const alertMapRef = useRef<Map<string, { cameraId: string; timestamp: number }>>(new Map())
   const pollingRef = useRef<number | null>(null)
   const alertPollingRef = useRef<number | null>(null)
   const uploadTimerRef = useRef<number | null>(null)
+  const previewUrlsRef = useRef<Map<string, string>>(new Map())
+  const mainStreamIdRef = useRef('main_webcam_0')
+  const snapshotTickRef = useRef<number | null>(null)
 
   const mainCamera = useMemo(
     () => cameras.find((cam) => cam.id === mainStreamId),
@@ -397,6 +415,28 @@ function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    const hasSnapshotFeed = Boolean(mainCamera?.snapshot_url && !mainCamera?.stream_url)
+
+    if (snapshotTickRef.current) {
+      window.clearInterval(snapshotTickRef.current)
+      snapshotTickRef.current = null
+    }
+
+    if (hasSnapshotFeed) {
+      snapshotTickRef.current = window.setInterval(() => {
+        setFeedRefreshKey(Date.now())
+      }, 180)
+    }
+
+    return () => {
+      if (snapshotTickRef.current) {
+        window.clearInterval(snapshotTickRef.current)
+        snapshotTickRef.current = null
+      }
+    }
+  }, [mainCamera?.snapshot_url, mainCamera?.stream_url, mainStreamId])
+
+  useEffect(() => {
     if (showCameraManager) {
       loadCameraStatusList()
     }
@@ -413,8 +453,44 @@ function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      previewUrlsRef.current.clear()
+    }
+  }, [])
+
+  useEffect(() => {
     window.localStorage.setItem('fallguard_dashboard_theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    mainStreamIdRef.current = mainStreamId
+  }, [mainStreamId])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const checkServerConnection = async () => {
+      try {
+        const data = await apiCall('/health')
+        if (!isCancelled) {
+          setServerReachable(data.status === 'ok')
+        }
+      } catch {
+        if (!isCancelled) {
+          setServerReachable(false)
+        }
+      }
+    }
+
+    checkServerConnection()
+    const healthTimer = window.setInterval(checkServerConnection, 10000)
+
+    return () => {
+      isCancelled = true
+      window.clearInterval(healthTimer)
+    }
+  }, [])
 
   const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     const method = (options.method || 'GET').toUpperCase()
@@ -430,6 +506,19 @@ function DashboardPage() {
           }
         })()
       : {}
+
+    if (endpoint === '/health') {
+      const response = await fetch(`${getServerBaseUrl()}${endpoint}`, {
+        method: 'GET',
+        cache: 'no-store'
+      })
+
+      if (!response.ok) {
+        throw new Error(`Health check failed with status ${response.status}`)
+      }
+
+      return response.json()
+    }
 
     if (endpoint === '/settings') {
       if (method === 'POST') {
@@ -453,16 +542,29 @@ function DashboardPage() {
     }
 
     if (endpoint === '/alerts/active') {
-      return {
-        success: true,
-        alerts: localBackend.cameras
-          .filter((camera) => camera.color === 'red' && camera.isLive)
-          .map((camera) => ({
-            camera_id: camera.id,
-            camera_name: camera.name,
-            confidence: camera.confidence_score,
-            timestamp: Math.floor(Date.now() / 1000)
-          }))
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/alerts/active`, {
+          method: 'GET',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`alerts request failed with status ${response.status}`)
+        }
+
+        return response.json()
+      } catch {
+        return {
+          success: true,
+          alerts: localBackend.cameras
+            .filter((camera) => camera.color === 'red' && camera.isLive)
+            .map((camera) => ({
+              camera_id: camera.id,
+              camera_name: camera.name,
+              confidence: camera.confidence_score,
+              timestamp: Math.floor(Date.now() / 1000)
+            }))
+        }
       }
     }
 
@@ -522,11 +624,43 @@ function DashboardPage() {
     }
 
     if (endpoint === '/cameras') {
-      return { success: true, cameras: localBackend.cameras.map(cloneCamera) }
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/cameras`, {
+          method: 'GET',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`camera list failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        const cameras = Array.isArray(data.cameras) ? data.cameras : []
+        localBackend.cameras = cameras.map((camera: Camera) => ({ ...camera }))
+        return { success: true, cameras }
+      } catch {
+        return { success: true, cameras: localBackend.cameras.map(cloneCamera) }
+      }
     }
 
     if (endpoint === '/cameras/all_definitions') {
-      return { success: true, definitions: localBackend.cameras.map(cloneCamera) }
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/cameras/all_definitions`, {
+          method: 'GET',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`camera definitions failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        const definitions = Array.isArray(data.cameras) ? data.cameras : []
+        localBackend.cameras = definitions.map((camera: Camera) => ({ ...camera }))
+        return { success: true, definitions }
+      } catch {
+        return { success: true, definitions: localBackend.cameras.map(cloneCamera) }
+      }
     }
 
     if (endpoint === '/cameras/add' && method === 'POST') {
@@ -541,7 +675,8 @@ function DashboardPage() {
         isLive: true,
         confidence_score: 0.18,
         fps: 24,
-        source
+        source,
+        source_kind: 'camera'
       })
       return { success: true, message: `Camera '${name}' added`, camera_id: cameraId }
     }
@@ -562,8 +697,23 @@ function DashboardPage() {
 
     if (endpoint.startsWith('/cameras/remove/') && method === 'DELETE') {
       const cameraId = endpoint.split('/').pop() || ''
-      localBackend.cameras = localBackend.cameras.filter((camera) => camera.id !== cameraId)
-      return { success: true, message: 'Camera removed' }
+
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api${endpoint}`, {
+          method: 'DELETE',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`remove failed with status ${response.status}`)
+        }
+
+        localBackend.cameras = localBackend.cameras.filter((camera) => camera.id !== cameraId)
+        return response.json()
+      } catch {
+        localBackend.cameras = localBackend.cameras.filter((camera) => camera.id !== cameraId)
+        return { success: true, message: 'Camera removed' }
+      }
     }
 
     if (endpoint === '/cameras/add_existing' && method === 'POST') {
@@ -581,19 +731,78 @@ function DashboardPage() {
     }
 
     if (endpoint === '/cameras/upload' && method === 'POST') {
-      const name = String(body.get?.('name') || body.name || 'Uploaded Video')
-      const cameraId = `cam_${Math.random().toString(36).slice(2, 10)}`
-      localBackend.cameras.push({
-        id: cameraId,
-        name,
-        status: 'Processing',
-        color: 'green',
-        isLive: true,
-        confidence_score: 0.22,
-        fps: 18,
-        source: 'Uploaded video file'
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/cameras/upload`, {
+          method: 'POST',
+          body: rawBody as BodyInit,
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`Upload failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        const cameraRecord = data.camera as Camera | undefined
+        const cameraId = String(data.camera_id || cameraRecord?.id || '')
+
+        if (cameraRecord) {
+          localBackend.cameras = localBackend.cameras.filter((camera) => camera.id !== cameraRecord.id)
+          localBackend.cameras.push({
+            ...cameraRecord,
+            source_kind: cameraRecord.source_kind || 'video',
+            snapshot_url: cameraRecord.snapshot_url || `/api/cameras/${cameraRecord.id}/snapshot`
+          })
+        }
+
+        return { ...data, camera_id: cameraId }
+      } catch {
+        const name = String(body.get?.('name') || body.name || 'Uploaded Video')
+        const uploadedFile = body.video_file as File | undefined
+        const previewUrl = uploadedFile instanceof File ? URL.createObjectURL(uploadedFile) : ''
+        const cameraId = `cam_${Math.random().toString(36).slice(2, 10)}`
+
+        if (previewUrl) {
+          const previousUrl = previewUrlsRef.current.get(cameraId)
+          if (previousUrl) {
+            URL.revokeObjectURL(previousUrl)
+          }
+          previewUrlsRef.current.set(cameraId, previewUrl)
+        }
+
+        localBackend.cameras.push({
+          id: cameraId,
+          name,
+          status: 'Looping',
+          color: 'green',
+          isLive: true,
+          confidence_score: 0.22,
+          fps: 18,
+          source: 'Uploaded video file',
+          source_kind: 'video',
+          preview_url: previewUrl || undefined
+        })
+        return { success: true, message: `Video '${name}' uploaded successfully`, camera_id: cameraId }
+      }
+    }
+
+    if (endpoint === '/cameras' || endpoint.startsWith('/cameras/') || endpoint === '/cameras/all_definitions') {
+      const apiEndpoint = endpoint === '/cameras' || endpoint.startsWith('/cameras/')
+        ? `/api${endpoint}`
+        : '/api/cameras/all_definitions'
+
+      const response = await fetch(`${getServerBaseUrl()}${apiEndpoint}`, {
+        method,
+        headers: rawBody instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
+        body: rawBody instanceof FormData ? rawBody : method === 'GET' ? undefined : (options.body as BodyInit),
+        cache: 'no-store'
       })
-      return { success: true, message: `Video '${name}' uploaded successfully`, camera_id: cameraId }
+
+      if (!response.ok) {
+        throw new Error(`${apiEndpoint} failed with status ${response.status}`)
+      }
+
+      return response.json()
     }
 
     if (endpoint === '/incidents') {
@@ -757,10 +966,14 @@ function DashboardPage() {
       const data = await apiCall('/cameras')
       const newCameras: Camera[] = data.cameras || []
       setCameras(newCameras)
+      setFeedRefreshKey(Date.now())
 
-      if (!newCameras.find((cam) => cam.id === mainStreamId)) {
-        const mainCamera = newCameras.find((cam) => cam.id === 'main_webcam_0')
-        setMainStreamId(mainCamera ? mainCamera.id : newCameras[0]?.id || 'main_webcam_0')
+      const currentMainStreamId = mainStreamIdRef.current
+      if (!newCameras.some((cam) => cam.id === currentMainStreamId)) {
+        const fallbackCamera = newCameras.find((cam) => cam.id === 'main_webcam_0') || newCameras[0]
+        const nextMainStreamId = fallbackCamera?.id || 'main_webcam_0'
+        mainStreamIdRef.current = nextMainStreamId
+        setMainStreamId(nextMainStreamId)
       }
     } catch (error) {
       console.error('[CAMERAS] Failed to load cameras:', error)
@@ -778,7 +991,96 @@ function DashboardPage() {
       return
     }
     setMainStreamError(false)
+    mainStreamIdRef.current = cameraId
     setMainStreamId(cameraId)
+  }
+
+  const renderCameraMedia = (
+    camera: Camera | undefined,
+    alt: string,
+    isMainFeed = false,
+    preferStream = false
+  ) => {
+    if (camera?.preview_url) {
+      return (
+        <video
+          key={camera.preview_url}
+          src={camera.preview_url}
+          aria-label={alt}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onLoadedData={() => {
+            if (isMainFeed) {
+              setMainStreamError(false)
+            }
+          }}
+          onError={() => {
+            if (isMainFeed) {
+              setMainStreamError(true)
+            }
+          }}
+        />
+      )
+    }
+
+    if (camera?.stream_url && (isMainFeed || preferStream)) {
+      return (
+        <img
+          key={camera.stream_url}
+          src={`${getServerBaseUrl()}${camera.stream_url}`}
+          alt={alt}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onLoad={() => {
+            setMainStreamError(false)
+          }}
+          onError={() => {
+            setMainStreamError(true)
+          }}
+        />
+      )
+    }
+
+    if (camera?.snapshot_url) {
+      return (
+        <img
+          src={`${getServerBaseUrl()}${camera.snapshot_url}${camera.snapshot_url.includes('?') ? '&' : '?'}t=${feedRefreshKey}`}
+          alt={alt}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onLoad={() => {
+            if (isMainFeed) {
+              setMainStreamError(false)
+            }
+          }}
+          onError={() => {
+            if (isMainFeed) {
+              setMainStreamError(true)
+            }
+          }}
+        />
+      )
+    }
+
+    return (
+      <img
+        src={buildPlaceholderFeed(camera?.name || alt, camera?.status || 'Active')}
+        alt={alt}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+        onLoad={() => {
+          if (isMainFeed) {
+            setMainStreamError(false)
+          }
+        }}
+        onError={() => {
+          if (isMainFeed) {
+            setMainStreamError(true)
+          }
+        }}
+      />
+    )
   }
 
   const checkAdminAuth = async () => {
@@ -1162,6 +1464,12 @@ function DashboardPage() {
     if (!confirm('Permanently remove this camera? This cannot be undone.')) return
 
     try {
+      const previewUrl = previewUrlsRef.current.get(id)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        previewUrlsRef.current.delete(id)
+      }
+
       await apiCall(`/cameras/remove/${id}`, { method: 'DELETE' })
       showToast('Camera removed')
 
@@ -1301,7 +1609,9 @@ function DashboardPage() {
             className={`status-badge ${
               statusCounts.fallDetections > 0
                 ? 'bg-red-600 fall-alert'
-                : statusCounts.activeCameras > 0
+                  : serverReachable === false
+                  ? 'bg-red-600'
+                  : serverReachable === true
                 ? 'bg-green-600'
                 : 'bg-gray-600'
             }`}
@@ -1310,9 +1620,11 @@ function DashboardPage() {
             <span>
               {statusCounts.fallDetections > 0
                 ? '⚠️ FALL DETECTED'
-                : statusCounts.activeCameras > 0
-                ? 'SYSTEM NORMAL'
-                : 'NO CAMERAS'}
+                  : serverReachable === false
+                  ? 'SERVER OFFLINE'
+                  : serverReachable === true
+                ? 'SERVER ONLINE'
+                  : 'CHECKING SERVER'}
             </span>
           </div>
           <button
@@ -1336,14 +1648,7 @@ function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: 'calc(100vh - 120px)' }}>
         <div className="lg:col-span-2 bg-gray-800 rounded-xl overflow-hidden relative shadow-2xl">
           <div className="main-feed">
-            <img
-              id="main-stream-img"
-              src={buildPlaceholderFeed(mainCamera?.name || 'Main Webcam Stream', mainCamera?.status || 'Active')}
-              alt="Main Feed"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-              onLoad={() => setMainStreamError(false)}
-              onError={() => setMainStreamError(true)}
-            />
+            {renderCameraMedia(mainCamera, 'Main Feed', true)}
             {mainStreamError ? (
               <div className="absolute inset-0 bg-gray-900 flex items-center justify-center flex-col">
                 <svg className="w-24 h-24 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1435,7 +1740,7 @@ function DashboardPage() {
                   onClick={() => switchMainFeed(cam.id)}
                 >
                   {cam.isLive ? (
-                    <img src={buildPlaceholderFeed(cam.name, cam.status || 'Live')} alt={cam.name} />
+                    renderCameraMedia(cam, cam.name, false, true)
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400">
                       <p>📷 Camera Offline</p>
@@ -1481,8 +1786,8 @@ function DashboardPage() {
 
       {showAdminPanel ? (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-gray-800 z-10">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="w-full px-6 py-6 border-b border-gray-700 flex-none flex items-center justify-between bg-gray-800 z-10">
               <h2 className="text-2xl font-bold">Admin Panel</h2>
               <div className="flex items-center gap-3">
                 <button
@@ -1500,7 +1805,7 @@ function DashboardPage() {
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
               <div className="bg-gray-900 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-4">Detection Parameters</h3>
                 <form onSubmit={saveSettings} className="space-y-4">
