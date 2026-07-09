@@ -812,6 +812,7 @@ function DashboardPage() {
     setIsAdminAuthenticated(false)
     setShowAdminPanel(false)
     showToast('Logged out successfully', 'info')
+    navigate('/login', { replace: true })
   }
 
   const submitAdminLogin = async (event: React.FormEvent<HTMLFormElement>) => {

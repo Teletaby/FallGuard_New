@@ -44,15 +44,15 @@ function LoginPage() {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <p className="text-gray-400">Checking session...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-900">
+        <p className="text-slate-500">Checking session...</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md mx-auto bg-gray-800 rounded-2xl shadow-2xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-900">
+      <div className="w-full max-w-md mx-auto bg-white/95 rounded-2xl shadow-2xl p-8 border border-slate-200">
         <div className="flex items-center justify-center gap-3 mb-6">
           <img
             src="/static/images/fallguard-logo.svg"
@@ -70,7 +70,7 @@ function LoginPage() {
             <input
               type="password"
               id="password"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 placeholder:text-slate-400"
               placeholder="Enter admin password"
               required
               autoFocus
@@ -89,9 +89,9 @@ function LoginPage() {
             <p className="text-sm text-red-400 text-center">{error}</p>
           ) : null}
         </form>
-        <div className="mt-6 text-center text-sm text-gray-400">
+        <div className="mt-6 text-center text-sm text-slate-500">
           Looking for the public landing page?
-          <Link to="/landing" className="text-blue-400 hover:text-blue-300 ml-1">
+          <Link to="/landing" className="text-blue-600 hover:text-blue-700 ml-1">
             View landing
           </Link>
         </div>
