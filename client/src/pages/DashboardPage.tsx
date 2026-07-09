@@ -114,18 +114,49 @@ const dashboardThemeStyles = `
     background-color: rgba(15, 23, 42, 0.2) !important;
   }
   .dashboard-theme-light .overflow-y-auto,
+  .dashboard-theme-light .overflow-y-scroll,
   .dashboard-theme-light .overflow-auto,
   .dashboard-theme-light .overflow-scroll {
-    scrollbar-gutter: stable;
+    scrollbar-gutter: stable both-edges;
   }
   .dashboard-theme-night .overflow-y-auto,
+  .dashboard-theme-night .overflow-y-scroll,
   .dashboard-theme-night .overflow-auto,
   .dashboard-theme-night .overflow-scroll {
-    scrollbar-gutter: stable;
+    scrollbar-gutter: stable both-edges;
   }
   .dashboard-theme-night .bg-gray-900,
   .dashboard-theme-night .bg-gray-800 {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
     border: 1px solid transparent !important;
+    box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.95) !important;
+  }
+  .dashboard-theme-night .bg-gray-800.rounded-xl,
+  .dashboard-theme-night .bg-gray-800.rounded-2xl,
+  .dashboard-theme-night .bg-gray-800.rounded-lg,
+  .dashboard-theme-night .bg-gray-900.rounded-xl,
+  .dashboard-theme-night .bg-gray-900.rounded-2xl,
+  .dashboard-theme-night .bg-gray-900.rounded-lg,
+  .dashboard-theme-night .bg-gray-700.rounded-xl,
+  .dashboard-theme-night .bg-gray-700.rounded-2xl,
+  .dashboard-theme-night .bg-gray-700.rounded-lg,
+  .dashboard-theme-night .bg-gray-600.rounded-xl,
+  .dashboard-theme-night .bg-gray-600.rounded-2xl,
+  .dashboard-theme-night .bg-gray-600.rounded-lg {
+    border: 0.8px solid rgba(71, 85, 105, 0.9) !important;
+    box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.6) !important;
+  }
+  .dashboard-theme-night .bg-gray-700,
+  .dashboard-theme-night .bg-gray-600 {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid transparent !important;
+    box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.9) !important;
+  }
+  .dashboard-theme-night .bg-gray-800\/40 {
+    background-color: rgba(15, 23, 42, 0.85) !important;
+    box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.55) !important;
   }
   .dashboard-theme-night .theme-toggle-button {
     background-color: #334155 !important;
@@ -135,6 +166,16 @@ const dashboardThemeStyles = `
   .dashboard-theme-night .theme-toggle-button:hover {
     background-color: #475569 !important;
     border-color: #94a3b8 !important;
+  }
+  .dashboard-theme-night .rounded-xl,
+  .dashboard-theme-night .rounded-2xl,
+  .dashboard-theme-night .rounded-lg {
+    box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.9), 0 12px 30px rgba(2, 6, 23, 0.35) !important;
+  }
+  .dashboard-theme-night .shadow-2xl,
+  .dashboard-theme-night .shadow-xl,
+  .dashboard-theme-night .shadow-lg {
+    box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.9), 0 20px 45px rgba(2, 6, 23, 0.55) !important;
   }
   .dashboard-theme-light .rounded-xl,
   .dashboard-theme-light .rounded-2xl,
@@ -1205,7 +1246,7 @@ function DashboardPage() {
 
   return (
     <div className={`min-h-screen p-4 ${theme === 'light' ? 'dashboard-theme-light bg-slate-100 text-slate-900' : 'dashboard-theme-night bg-gray-900 text-white'}`}>
-      {theme === 'light' ? <style>{dashboardThemeStyles}</style> : null}
+      <style>{dashboardThemeStyles}</style>
       {globalAlert ? (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl">
           <div className="fall-alert-banner bg-red-600 text-white rounded-lg shadow-2xl mx-4">
@@ -1239,10 +1280,8 @@ function DashboardPage() {
 
       <header className="bg-gray-800 rounded-xl p-4 mb-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-4">
-          <button onClick={goToHomepage} className="text-gray-400 hover:text-white transition">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+          <button onClick={goToHomepage} className="transition" aria-label="Go to homepage">
+            <img src="/static/images/fallguard-logo.svg" alt="FallGuard Logo" className="h-10 w-auto" />
           </button>
           <div>
             <h1 className="text-2xl font-bold">FallGuard Dashboard</h1>
@@ -1356,7 +1395,7 @@ function DashboardPage() {
           ) : null}
         </div>
 
-        <div className="bg-gray-800 rounded-xl p-4 overflow-y-auto shadow-xl">
+        <div className="bg-gray-800 rounded-xl p-4 overflow-y-scroll shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">All Cameras</h3>
             <button
