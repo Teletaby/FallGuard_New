@@ -141,10 +141,10 @@ function LandingPage() {
                 </div>
 
                 <div className="bg-gray-800 rounded-xl p-8 hover:bg-gray-700 transition">
-                  <div className="text-5xl mb-6">🚨</div>
-                  <h4 className="text-2xl font-bold mb-4">Emergency SOS</h4>
+                  <div className="text-5xl mb-6">📄</div>
+                  <h4 className="text-2xl font-bold mb-4">Generate Reports</h4>
                   <p className="text-gray-300 text-lg">
-                    Rapid response system with emergency alerts and detailed fall detection confidence scores.
+                    Create detailed incident reports with timestamps, confidence scores, and export-ready records for review.
                   </p>
                 </div>
               </div>
@@ -171,16 +171,6 @@ function LandingPage() {
                       />
                     </svg>
                     <span>Multi-camera support for comprehensive coverage</span>
-                  </li>
-                  <li className="flex items-center gap-4">
-                    <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span>Instant Telegram notifications for peace of mind</span>
                   </li>
                   <li className="flex items-center gap-4">
                     <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
