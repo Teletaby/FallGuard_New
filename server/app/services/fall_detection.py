@@ -91,7 +91,7 @@ class FallDetectionService:
         self._incident_service = incident_service
         self._model: PoseLSTM | None = None
         self._model_path: Path | None = None
-        self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self._device = torch.device('cpu')
         self._model_lock = Lock()
         self._track_lock = Lock()
         self._tracks: dict[str, dict[str, PersonTrack]] = {}
