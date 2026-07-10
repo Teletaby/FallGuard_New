@@ -442,6 +442,7 @@ function DashboardPage() {
   const [globalAlert, setGlobalAlert] = useState<{
     cameraId: string
     cameraName: string
+    streamName: string
     confidence: number
   } | null>(null)
   const [serverReachable, setServerReachable] = useState<boolean | null>(null)
@@ -1061,13 +1062,18 @@ function DashboardPage() {
     const alertKey = alert.alert_id || `${alert.camera_id}_${Math.floor(alert.timestamp / 10)}`
     if (!alertMapRef.current.has(alertKey)) {
       syncAlert(alert)
-      showGlobalFallAlert(alert.camera_name, alert.confidence, alert.camera_id)
+      showGlobalFallAlert(alert.camera_id, alert.camera_name, alert.confidence)
       window.setTimeout(() => alertMapRef.current.delete(alertKey), 30000)
     }
   }
 
-  const showGlobalFallAlert = (cameraName: string, confidence: number, cameraId: string) => {
-    setGlobalAlert({ cameraName, confidence, cameraId })
+  const showGlobalFallAlert = (cameraId: string, cameraName: string, confidence: number) => {
+    setGlobalAlert({
+      cameraId,
+      cameraName,
+      streamName: getStreamName(cameraId, cameraName),
+      confidence
+    })
     playAlertSound()
     flashPageTitle()
   }
@@ -1127,6 +1133,11 @@ function DashboardPage() {
   const getCameraName = (cameraId: string) => {
     const camera = cameras.find((cam) => cam.id === cameraId)
     return camera ? camera.name : 'Unknown Camera'
+  }
+
+  const getStreamName = (cameraId: string, fallbackName: string) => {
+    const camera = cameras.find((cam) => cam.id === cameraId)
+    return camera?.stream_name?.trim() || camera?.name || fallbackName
   }
 
   const loadCameras = async () => {
@@ -1742,7 +1753,7 @@ function DashboardPage() {
                 <div className="text-3xl urgent-pulse">🚨</div>
                 <div>
                   <h3 className="text-xl font-bold">FALL DETECTED!</h3>
-                  <p className="text-sm opacity-90">Location: {globalAlert.cameraName}</p>
+                  <p className="text-sm opacity-90">Location: {globalAlert.streamName}</p>
                   <p className="text-xs opacity-80">Confidence: {(globalAlert.confidence * 100).toFixed(1)}%</p>
                 </div>
               </div>
