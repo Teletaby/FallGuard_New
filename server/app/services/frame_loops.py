@@ -11,6 +11,7 @@ from typing import Any
 import cv2
 import numpy as np
 
+from app.services import fall_detection_service
 from app.services.pose import PoseStats, pose_service
 from app.state import state
 
@@ -36,6 +37,7 @@ class CameraRuntime:
     source_fps: float = 30.0
     target_process_fps: float = 24.0
     frame_index: int = 0
+    loop_epoch: int = 0
 
 
 class FrameLoopService:
@@ -181,6 +183,9 @@ class FrameLoopService:
                 success, frame = capture.read()
                 if not success:
                     if runtime.loop_on_eof and runtime.source_kind == 'video' and isinstance(runtime.source_value, str) and Path(runtime.source_value).exists():
+                        runtime.loop_epoch += 1
+                        self._reset_loop_runtime(runtime)
+                        fall_detection_service.reset_camera(runtime.camera_id)
                         capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         runtime.frame_index = 0
                         next_frame_deadline = perf_counter()
@@ -195,7 +200,7 @@ class FrameLoopService:
 
                 while not runtime.stop_event.is_set():
                     try:
-                        runtime.pose_queue.put_nowait(frame.copy())
+                        runtime.pose_queue.put_nowait((runtime.loop_epoch, runtime.frame_index, frame.copy()))
                         break
                     except Full:
                         try:
@@ -248,14 +253,25 @@ class FrameLoopService:
             return
 
         while True:
-            frame = runtime.pose_queue.get()
-            if frame is None or runtime.stop_event.is_set():
+            queue_item = runtime.pose_queue.get()
+            if queue_item is None or runtime.stop_event.is_set():
                 break
+
+            loop_epoch, frame_index, frame = queue_item
+            if loop_epoch != runtime.loop_epoch:
+                continue
 
             start = perf_counter()
             try:
                 results = pose_service.predict(frame)
+                if loop_epoch != runtime.loop_epoch:
+                    continue
                 annotated_frame, keypoints = pose_service.annotate_frame(frame, results)
+                camera_name = self._camera_name(runtime.camera_id)
+                fall_detection_service.process_frame(runtime.camera_id, camera_name, frame_index, frame, results, loop_epoch)
+                if loop_epoch != runtime.loop_epoch:
+                    continue
+                self._overlay_fall_annotations(annotated_frame, fall_detection_service.get_track_annotations(runtime.camera_id))
                 elapsed_ms = (perf_counter() - start) * 1000.0
 
                 runtime.pose_stats.record(elapsed_ms)
@@ -291,6 +307,50 @@ class FrameLoopService:
             frame_source = state.frame_sources.get(camera_id)
             if frame_source is not None:
                 frame_source.update(updates)
+
+    def _camera_name(self, camera_id: str) -> str:
+        with state.lock:
+            camera = state.cameras.get(camera_id)
+            if camera is None:
+                return camera_id
+
+            return str(camera.get('name') or camera_id)
+
+    def _reset_loop_runtime(self, runtime: CameraRuntime) -> None:
+        with runtime.frame_lock:
+            runtime.latest_frame = None
+            runtime.latest_annotated_frame = None
+            runtime.latest_frame_jpeg = None
+
+        runtime.pose_stats = PoseStats()
+
+        while True:
+            try:
+                runtime.pose_queue.get_nowait()
+            except Empty:
+                break
+
+    def _overlay_fall_annotations(self, frame: np.ndarray, annotations: list[dict[str, Any]]) -> None:
+        height, width = frame.shape[:2]
+
+        for annotation in annotations:
+            box = annotation.get('box')
+            if not box or len(box) != 4:
+                continue
+
+            x1, y1, x2, y2 = [int(round(value)) for value in box]
+            x1 = max(0, min(x1, width - 1))
+            y1 = max(0, min(y1, height - 1))
+            x2 = max(0, min(x2, width - 1))
+            y2 = max(0, min(y2, height - 1))
+
+            if x2 <= x1 or y2 <= y1:
+                continue
+
+            is_fall = bool(annotation.get('fall_active', False))
+            color = (0, 0, 255) if is_fall else (0, 255, 0)
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1, cv2.LINE_AA)
 
     def _signal_end_of_stream(self, runtime: CameraRuntime) -> None:
         try:

@@ -215,6 +215,8 @@ class PoseService:
 
         xy = keypoints.xy.cpu().numpy()
         conf = keypoints.conf.cpu().numpy() if getattr(keypoints, 'conf', None) is not None else None
+        boxes = getattr(result, 'boxes', None)
+        xyxy = boxes.xyxy.cpu().numpy() if boxes is not None and getattr(boxes, 'xyxy', None) is not None else None
         height, width = annotated.shape[:2]
         colors = [
             (255, 99, 71),
@@ -226,6 +228,7 @@ class PoseService:
         ]
 
         for person_index, person_keypoints in enumerate(xy):
+            has_visible_keypoint = False
             person_conf = conf[person_index] if conf is not None else None
 
             for index, (name, region) in enumerate(KEYPOINT_NAMES):
@@ -238,11 +241,12 @@ class PoseService:
                 if x_value <= 0 or y_value <= 0:
                     continue
 
+                has_visible_keypoint = True
                 x_int = int(round(x_value))
                 y_int = int(round(y_value))
                 color = colors[index % len(colors)]
 
-                cv2.circle(annotated, (x_int, y_int), 4, color, -1, cv2.LINE_AA)
+                cv2.circle(annotated, (x_int, y_int), 2, color, -1, cv2.LINE_AA)
 
                 detected_keypoints.append({
                     'person_index': person_index,
@@ -253,6 +257,18 @@ class PoseService:
                     'y': float(round(y_value / height, 4)),
                     'confidence': float(round(confidence, 4)) if confidence is not None else None,
                 })
+
+            if xyxy is not None and person_index < len(xyxy) and has_visible_keypoint:
+                x1, y1, x2, y2 = xyxy[person_index][:4]
+                if x2 > x1 and y2 > y1:
+                    cv2.rectangle(
+                        annotated,
+                        (int(round(x1)), int(round(y1))),
+                        (int(round(x2)), int(round(y2))),
+                        (30, 144, 255),
+                        1,
+                        cv2.LINE_AA,
+                    )
 
         return annotated, detected_keypoints
 

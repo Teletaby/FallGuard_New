@@ -402,7 +402,7 @@ function DashboardPage() {
 
   const alertMapRef = useRef<Map<string, { cameraId: string; timestamp: number }>>(new Map())
   const pollingRef = useRef<number | null>(null)
-  const alertPollingRef = useRef<number | null>(null)
+  const alertStreamRef = useRef<EventSource | null>(null)
   const uploadTimerRef = useRef<number | null>(null)
   const previewUrlsRef = useRef<Map<string, string>>(new Map())
   const mainStreamIdRef = useRef('main_webcam_0')
@@ -849,7 +849,7 @@ function DashboardPage() {
 
   const startPolling = () => {
     loadCameras()
-    startAlertPolling()
+    startAlertStream()
 
     pollingRef.current = window.setInterval(() => {
       loadCameras()
@@ -864,47 +864,76 @@ function DashboardPage() {
       window.clearInterval(pollingRef.current)
       pollingRef.current = null
     }
-    stopAlertPolling()
+    stopAlertStream()
   }
 
-  const startAlertPolling = () => {
-    checkForWebsiteAlerts()
-    alertPollingRef.current = window.setInterval(checkForWebsiteAlerts, 1000)
-  }
+  const startAlertStream = async () => {
+    stopAlertStream()
 
-  const stopAlertPolling = () => {
-    if (alertPollingRef.current) {
-      window.clearInterval(alertPollingRef.current)
-      alertPollingRef.current = null
+    try {
+      const source = new EventSource(`${getServerBaseUrl()}/api/alerts/stream`)
+      alertStreamRef.current = source
+
+      source.addEventListener('snapshot', (event) => {
+        try {
+          const payload = JSON.parse((event as MessageEvent).data) as { alerts?: Array<{ alert_id?: string; camera_id: string; camera_name: string; confidence: number; timestamp: number }> }
+          if (Array.isArray(payload.alerts)) {
+            payload.alerts.forEach((alert) => syncAlert(alert))
+          }
+        } catch {
+          // ignore malformed snapshot payloads
+        }
+      })
+
+      source.addEventListener('alert', (event) => {
+        try {
+          const alert = JSON.parse((event as MessageEvent).data) as { alert_id?: string; camera_id: string; camera_name: string; confidence: number; timestamp: number }
+          consumeAlert(alert)
+        } catch {
+          // ignore malformed alert payloads
+        }
+      })
+
+      source.onerror = () => {
+        if (alertStreamRef.current === source && source.readyState === EventSource.CLOSED) {
+          alertStreamRef.current = null
+        }
+      }
+    } catch {
+      alertStreamRef.current = null
     }
   }
 
-  const checkForWebsiteAlerts = async () => {
-    try {
-      const data = await apiCall('/alerts/active')
+  const stopAlertStream = () => {
+    if (alertStreamRef.current) {
+      alertStreamRef.current.close()
+      alertStreamRef.current = null
+    }
+  }
 
-      if (data.success && Array.isArray(data.alerts)) {
-        data.alerts.forEach((alert: { camera_id: string; camera_name: string; confidence: number; timestamp: number }) => {
-          const alertKey = `${alert.camera_id}_${Math.floor(alert.timestamp / 10)}`
-          if (!alertMapRef.current.has(alertKey)) {
-            alertMapRef.current.set(alertKey, {
-              cameraId: alert.camera_id,
-              timestamp: alert.timestamp
-            })
-            showGlobalFallAlert(alert.camera_name, alert.confidence, alert.camera_id)
-            window.setTimeout(() => alertMapRef.current.delete(alertKey), 30000)
-          }
-        })
+  const syncAlert = (alert: { alert_id?: string; camera_id: string; camera_name: string; confidence: number; timestamp: number }) => {
+    const alertKey = alert.alert_id || `${alert.camera_id}_${Math.floor(alert.timestamp / 10)}`
+    if (!alertMapRef.current.has(alertKey)) {
+      alertMapRef.current.set(alertKey, {
+        cameraId: alert.camera_id,
+        timestamp: alert.timestamp
+      })
+    }
 
-        const now = Date.now() / 1000
-        Array.from(alertMapRef.current.entries()).forEach(([key, value]) => {
-          if (now - value.timestamp > 35) {
-            alertMapRef.current.delete(key)
-          }
-        })
+    const now = Date.now() / 1000
+    Array.from(alertMapRef.current.entries()).forEach(([key, value]) => {
+      if (now - value.timestamp > 35) {
+        alertMapRef.current.delete(key)
       }
-    } catch {
-      // ignore alert errors
+    })
+  }
+
+  const consumeAlert = (alert: { alert_id?: string; camera_id: string; camera_name: string; confidence: number; timestamp: number }) => {
+    const alertKey = alert.alert_id || `${alert.camera_id}_${Math.floor(alert.timestamp / 10)}`
+    if (!alertMapRef.current.has(alertKey)) {
+      syncAlert(alert)
+      showGlobalFallAlert(alert.camera_name, alert.confidence, alert.camera_id)
+      window.setTimeout(() => alertMapRef.current.delete(alertKey), 30000)
     }
   }
 
@@ -1686,23 +1715,6 @@ function DashboardPage() {
             <p className="text-gray-300">Status: {mainCamera?.status || 'Active'}</p>
           </div>
 
-          {mainCamera?.color === 'red' ? (
-            <div className="absolute bottom-0 left-0 right-0 bg-red-600 text-white shadow-2xl">
-              <div className="fall-alert px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="text-3xl animate-bounce">⚠️</div>
-                  <div>
-                    <h3 className="text-xl font-bold">FALL DETECTED!</h3>
-                    <p className="text-sm opacity-90">{mainCamera.name}</p>
-                    <p className="text-xs opacity-80">Confidence: {(mainCamera.confidence_score * 100).toFixed(1)}%</p>
-                  </div>
-                </div>
-                <button onClick={() => showToast('Alert dismissed', 'info')} className="text-white hover:text-gray-200 text-2xl font-bold px-3">
-                  &times;
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div className="bg-gray-800 rounded-xl p-4 overflow-y-scroll shadow-xl">
