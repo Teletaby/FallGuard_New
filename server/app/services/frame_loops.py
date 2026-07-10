@@ -116,6 +116,8 @@ class FrameLoopService:
             except Exception:
                 pass
 
+        runtime.finished_event.wait(timeout=1.0)
+
     def snapshot(self, camera_id: str) -> dict[str, Any] | None:
         with state.lock:
             source = state.frame_sources.get(camera_id)

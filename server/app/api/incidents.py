@@ -21,8 +21,8 @@ def list_incidents() -> dict[str, object]:
 
 @router.get("/{incident_id}/pdf")
 def generate_incident_pdf(incident_id: str):
-    pdf_path = incident_service.pdf_path_for(incident_id)
-    if not pdf_path.exists():
+    pdf_path = incident_service.ensure_pdf(incident_id)
+    if pdf_path is None or not pdf_path.exists():
         raise HTTPException(status_code=404, detail="incident pdf not found")
     return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_path.name)
 

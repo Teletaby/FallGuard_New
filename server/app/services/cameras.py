@@ -16,9 +16,13 @@ class CameraService:
 
     def register_uploaded_video(self, upload_record: dict[str, Any], display_name: str | None = None) -> dict[str, Any]:
         camera_id = upload_record["upload_id"]
+        with state.lock:
+            video_camera_count = sum(1 for camera in state.cameras.values() if camera.get("source_kind") == "video")
+
         camera_record = {
             "id": camera_id,
-            "name": display_name or upload_record["filename"],
+            "name": f"Camera {video_camera_count + 1}",
+            "stream_name": display_name or upload_record["filename"],
             "source": upload_record["path"],
             "source_kind": "video",
             "isLive": True,

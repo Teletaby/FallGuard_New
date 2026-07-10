@@ -10,6 +10,7 @@ from app.api.auth import router as auth_router
 from app.api.cameras import router as cameras_router
 from app.api.health import router as health_router
 from app.api.incidents import router as incidents_router
+from app.api.settings import router as settings_router
 from app.api.pose import router as pose_router
 from app.services import pose_service
 from app.core.config import settings
@@ -37,6 +38,7 @@ app.include_router(auth_router)
 app.include_router(alerts_router)
 app.include_router(cameras_router)
 app.include_router(incidents_router)
+app.include_router(settings_router)
 app.include_router(pose_router)
 
 
@@ -51,6 +53,7 @@ def root() -> dict[str, object]:
             "/api/alerts/active",
             "/api/cameras",
             "/api/incidents",
+            "/api/settings",
             "/api/pose/status",
         ],
     }

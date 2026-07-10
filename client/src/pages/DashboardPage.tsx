@@ -10,6 +10,7 @@ type Camera = {
   confidence_score: number
   fps?: number
   source?: string
+  stream_name?: string
   source_kind?: 'camera' | 'video'
   preview_url?: string
   snapshot_url?: string
@@ -34,8 +35,15 @@ type Incident = {
   id: string
   timestamp: string
   severity: 'HIGH' | 'MEDIUM' | 'LOW'
+  camera_name?: string
+  camera_id?: string
+  person_id?: number
+  person_label?: string
+  fall_id?: string
+  stream_name?: string
   location: string
   confidence: number
+  snapshot_file?: string
   notes?: string
 }
 
@@ -46,7 +54,7 @@ type Toast = {
 }
 
 const defaultSettings: Settings = {
-  fall_threshold: 0.7,
+  fall_threshold: 0.8,
   fall_delay_seconds: 2,
   privacy_mode: 'full_video',
   pre_fall_buffer_seconds: 5,
@@ -241,8 +249,8 @@ const localBackend = {
     }
   ] as Camera[],
   subscribers: [
-    { chat_id: '10001', name: 'Local Admin', username: 'admin' },
-    { chat_id: '10002', name: 'Nurse Station', username: 'nurse_station' }
+    { chat_id: '6662643515', name: 'Carl', username: 'drawdeeed' },
+    { chat_id: '7397268220', name: 'JJ', username: '' }
   ] as TelegramSubscriber[],
   blocked: ['10003'],
   incidents: [
@@ -267,6 +275,46 @@ const localBackend = {
 const cloneCamera = (camera: Camera): Camera => ({ ...camera })
 const cloneSubscriber = (subscriber: TelegramSubscriber): TelegramSubscriber => ({ ...subscriber })
 const cloneIncident = (incident: Incident): Incident => ({ ...incident })
+
+const getIncidentLocationLabel = (incident: Pick<Incident, 'location' | 'stream_name'>) => {
+  const streamName = incident.stream_name?.trim()
+  if (streamName) {
+    return streamName
+  }
+
+  const location = incident.location.trim()
+  if (!location) {
+    return 'Unknown Location'
+  }
+
+  return location.replace(/\s+-\s+Person\s+#\d+$/i, '').trim()
+}
+
+const getIncidentCameraLabel = (incident: Incident, cameraDefinitions: Camera[]) => {
+  if (!incident.camera_id) {
+    return incident.camera_name || 'Unknown Camera'
+  }
+
+  const cameraIndex = cameraDefinitions.findIndex((camera) => camera.id === incident.camera_id)
+  if (cameraIndex === -1) {
+    return incident.camera_name || 'Unknown Camera'
+  }
+
+  const camera = cameraDefinitions[cameraIndex]
+  if (camera.source_kind === 'video') {
+    return `Camera ${cameraIndex + 1}`
+  }
+
+  return camera.name || incident.camera_name || 'Unknown Camera'
+}
+
+const getCameraSourceLabel = (camera: Camera, index: number) => {
+  if (camera.source_kind === 'video') {
+    return `Camera ${index + 1}`
+  }
+
+  return camera.source || 'Unknown source'
+}
 
 const buildPlaceholderFeed = (title: string, subtitle: string) => {
   const svg = `
@@ -296,7 +344,7 @@ const buildIncidentPdf = (incident: Incident, subscribers: TelegramSubscriber[])
     `Incident ID: ${incident.id}`,
     `Timestamp: ${incident.timestamp}`,
     `Severity: ${incident.severity}`,
-    `Location: ${incident.location}`,
+    `Location: ${getIncidentLocationLabel(incident)}`,
     `Confidence: ${(incident.confidence * 100).toFixed(1)}%`,
     `Notes: ${incident.notes || 'None'}`,
     '',
@@ -379,6 +427,7 @@ function DashboardPage() {
   const [adminBlocked, setAdminBlocked] = useState<string[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [cameraDefinitions, setCameraDefinitions] = useState<Camera[]>([])
+  const [cameraDefinitionsLoaded, setCameraDefinitionsLoaded] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [globalAlert, setGlobalAlert] = useState<{
     cameraId: string
@@ -532,22 +581,50 @@ function DashboardPage() {
 
     if (endpoint === '/settings') {
       if (method === 'POST') {
-        localBackend.settings = {
-          ...localBackend.settings,
-          ...(body.fall_threshold !== undefined ? { fall_threshold: Number(body.fall_threshold) } : {}),
-          ...(body.fall_delay_seconds !== undefined ? { fall_delay_seconds: Number(body.fall_delay_seconds) } : {}),
-          ...(body.privacy_mode !== undefined ? { privacy_mode: String(body.privacy_mode) } : {}),
-          ...(body.pre_fall_buffer_seconds !== undefined ? { pre_fall_buffer_seconds: Number(body.pre_fall_buffer_seconds) } : {}),
-          ...(body.hide_overlays !== undefined ? { hide_overlays: Boolean(body.hide_overlays) } : {})
+        try {
+          const response = await fetch(`${getServerBaseUrl()}/api/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            cache: 'no-store'
+          })
+
+          if (!response.ok) {
+            throw new Error(`settings update failed with status ${response.status}`)
+          }
+
+          return response.json()
+        } catch {
+          localBackend.settings = {
+            ...localBackend.settings,
+            ...(body.fall_threshold !== undefined ? { fall_threshold: Number(body.fall_threshold) } : {}),
+            ...(body.fall_delay_seconds !== undefined ? { fall_delay_seconds: Number(body.fall_delay_seconds) } : {}),
+            ...(body.privacy_mode !== undefined ? { privacy_mode: String(body.privacy_mode) } : {}),
+            ...(body.pre_fall_buffer_seconds !== undefined ? { pre_fall_buffer_seconds: Number(body.pre_fall_buffer_seconds) } : {}),
+            ...(body.hide_overlays !== undefined ? { hide_overlays: Boolean(body.hide_overlays) } : {})
+          }
+          return { success: true, settings: { ...localBackend.settings } }
         }
-        return { success: true, settings: { ...localBackend.settings } }
       }
 
-      return {
-        success: true,
-        settings: { ...localBackend.settings },
-        telegram_token: Boolean(localBackend.telegramToken),
-        telegram_bot_name: localBackend.telegramBotName
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/settings`, {
+          method: 'GET',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`settings request failed with status ${response.status}`)
+        }
+
+        return response.json()
+      } catch {
+        return {
+          success: true,
+          settings: { ...localBackend.settings },
+          telegram_token: Boolean(localBackend.telegramToken),
+          telegram_bot_name: localBackend.telegramBotName
+        }
       }
     }
 
@@ -771,6 +848,7 @@ function DashboardPage() {
         const uploadedFile = body.video_file as File | undefined
         const previewUrl = uploadedFile instanceof File ? URL.createObjectURL(uploadedFile) : ''
         const cameraId = `cam_${Math.random().toString(36).slice(2, 10)}`
+        const videoCameraCount = localBackend.cameras.filter((camera) => camera.source_kind === 'video').length
 
         if (previewUrl) {
           const previousUrl = previewUrlsRef.current.get(cameraId)
@@ -782,7 +860,8 @@ function DashboardPage() {
 
         localBackend.cameras.push({
           id: cameraId,
-          name,
+          name: `Camera ${videoCameraCount + 1}`,
+          stream_name: name,
           status: 'Looping',
           color: 'green',
           isLive: true,
@@ -816,24 +895,65 @@ function DashboardPage() {
     }
 
     if (endpoint === '/incidents') {
-      return { success: true, incidents: localBackend.incidents.map(cloneIncident) }
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/incidents`, {
+          method: 'GET',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`incidents failed with status ${response.status}`)
+        }
+
+        return response.json()
+      } catch {
+        return { success: true, incidents: localBackend.incidents.map(cloneIncident) }
+      }
     }
 
     if (endpoint.startsWith('/incidents/') && endpoint.endsWith('/notes') && method === 'POST') {
       const incidentId = endpoint.split('/')[2]
-      const incident = localBackend.incidents.find((item) => item.id === incidentId)
-      if (!incident) {
-        return { success: false, message: 'Incident not found' }
-      }
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/incidents/${incidentId}/notes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: body.notes || '' }),
+          cache: 'no-store'
+        })
 
-      incident.notes = String(body.notes || '')
-      return { success: true, message: 'Notes updated' }
+        if (!response.ok) {
+          throw new Error(`incident notes failed with status ${response.status}`)
+        }
+
+        return response.json()
+      } catch {
+        const incident = localBackend.incidents.find((item) => item.id === incidentId)
+        if (!incident) {
+          return { success: false, message: 'Incident not found' }
+        }
+
+        incident.notes = String(body.notes || '')
+        return { success: true, message: 'Notes updated' }
+      }
     }
 
     if (endpoint.startsWith('/incidents/') && method === 'DELETE') {
       const incidentId = endpoint.split('/')[2]
-      localBackend.incidents = localBackend.incidents.filter((incident) => incident.id !== incidentId)
-      return { success: true, message: 'Incident deleted' }
+      try {
+        const response = await fetch(`${getServerBaseUrl()}/api/incidents/${incidentId}`, {
+          method: 'DELETE',
+          cache: 'no-store'
+        })
+
+        if (!response.ok) {
+          throw new Error(`incident delete failed with status ${response.status}`)
+        }
+
+        return response.json()
+      } catch {
+        localBackend.incidents = localBackend.incidents.filter((incident) => incident.id !== incidentId)
+        return { success: true, message: 'Incident deleted' }
+      }
     }
 
     return { success: true }
@@ -1194,8 +1314,7 @@ function DashboardPage() {
         method: 'POST',
         body: JSON.stringify({
           fall_threshold: settings.fall_threshold,
-          fall_delay_seconds: settings.fall_delay_seconds,
-          hide_overlays: !!settings.hide_overlays
+          fall_delay_seconds: settings.fall_delay_seconds
         })
       })
       showToast('Settings saved successfully')
@@ -1393,6 +1512,8 @@ function DashboardPage() {
       setCameraDefinitions(data.definitions || [])
     } catch (error) {
       console.error('Failed to load camera status:', error)
+    } finally {
+      setCameraDefinitionsLoaded(true)
     }
   }
 
@@ -1413,7 +1534,15 @@ function DashboardPage() {
         return
       }
 
-      const pdfBlob = new Blob([buildIncidentPdf(incident, adminSubscribers)], { type: 'application/pdf' })
+      const response = await fetch(`${getServerBaseUrl()}/api/incidents/${incidentId}/pdf`, {
+        method: 'GET',
+        cache: 'no-store'
+      })
+
+      const pdfBlob = response.ok
+        ? await response.blob()
+        : new Blob([buildIncidentPdf(incident, adminSubscribers)], { type: 'application/pdf' })
+
       const url = window.URL.createObjectURL(pdfBlob)
       const link = document.createElement('a')
       link.href = url
@@ -1710,9 +1839,22 @@ function DashboardPage() {
             ) : null}
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-6">
-            <h2 className="text-2xl font-bold mb-1">{mainCamera?.name || 'Main Webcam Stream'}</h2>
-            <p className="text-gray-300">Status: {mainCamera?.status || 'Active'}</p>
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-linear-to-t from-black/85 via-black/55 to-transparent">
+            <div
+              className={`inline-flex max-w-full rounded-2xl px-4 py-3 backdrop-blur-md shadow-2xl ${
+                theme === 'light'
+                  ? 'border border-slate-200 bg-white/88'
+                  : 'border border-white/10 bg-black/60'
+              }`}
+            >
+              <h2
+                className={`truncate text-2xl font-bold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] ${
+                  theme === 'light' ? 'text-slate-900 drop-shadow-none' : 'text-white'
+                }`}
+              >
+                {mainCamera?.stream_name || mainCamera?.name || 'Main Webcam Stream'}
+              </h2>
+            </div>
           </div>
 
         </div>
@@ -1723,9 +1865,11 @@ function DashboardPage() {
             <button
               onClick={() => setShowCameraManager(true)}
               className="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition"
-              title="Add Camera"
+              title="Manage Cameras"
             >
-              <span className="text-xl">+</span>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 6h16M7 12h10M10 18h4" />
+              </svg>
             </button>
           </div>
 
@@ -1862,21 +2006,6 @@ function DashboardPage() {
                       }
                     />
                     <p className="text-xs text-gray-500 mt-1">Continuous detection time before alert</p>
-                  </div>
-
-                  <div className="flex items-start gap-3 bg-gray-800/40 border border-gray-700 rounded-lg px-4 py-3">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 accent-blue-600"
-                      checked={!!settings.hide_overlays}
-                      onChange={(event) =>
-                        setSettings((prev) => ({ ...prev, hide_overlays: event.target.checked }))
-                      }
-                    />
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium">Hide Bounding Box & Skeleton Overlay</label>
-                      <p className="text-xs text-gray-500 mt-1">Shows raw video (no on-frame drawings)</p>
-                    </div>
                   </div>
 
                   <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">
@@ -2093,19 +2222,25 @@ function DashboardPage() {
                         <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                           <div>
                             <p className="text-gray-400">Location</p>
-                            <p className="text-white">{incident.location}</p>
+                            <p className="text-white">{getIncidentLocationLabel(incident)}</p>
                           </div>
                           <div>
                             <p className="text-gray-400">Confidence</p>
                             <p className="text-white">{(incident.confidence * 100).toFixed(1)}%</p>
                           </div>
+                          {incident.camera_name || incident.camera_id ? (
+                            <div>
+                              <p className="text-gray-400">Camera</p>
+                              <p className="text-white">{getIncidentCameraLabel(incident, cameraDefinitions)}</p>
+                            </div>
+                          ) : null}
                         </div>
                         <div className="flex gap-2">
                           <button
                             onClick={() => generateIncidentPDF(incident.id)}
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded transition"
                           >
-                            📄 PDF Report
+                            📄 Download Report
                           </button>
                           <button
                             onClick={() => editIncidentNotes(incident.id)}
@@ -2134,10 +2269,12 @@ function DashboardPage() {
               <div className="bg-gray-900 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-4">Camera Status & Monitoring</h3>
                 <div className="space-y-3">
-                  {cameraDefinitions.length === 0 ? (
-                    <p className="text-gray-500 text-sm text-center py-4">Loading camera information...</p>
+                  {!cameraDefinitionsLoaded ? (
+                    <p className="text-gray-500 text-sm text-center py-4">Loading streams...</p>
+                  ) : cameraDefinitions.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-4">No streams available</p>
                   ) : (
-                    cameraDefinitions.map((cam) => (
+                    cameraDefinitions.map((cam, index) => (
                       <div key={cam.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-bold text-lg">{cam.name}</h4>
@@ -2164,7 +2301,7 @@ function DashboardPage() {
                           </div>
                           <div>
                             <p className="text-gray-400">Source</p>
-                            <p className="text-white font-semibold truncate">{cam.source}</p>
+                            <p className="text-white font-semibold truncate">{getCameraSourceLabel(cam, index)}</p>
                           </div>
                         </div>
                       </div>
@@ -2281,15 +2418,17 @@ function DashboardPage() {
               </button>
             </div>
             <div className="p-6">
-              {cameraDefinitions.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">Loading...</p>
+              {!cameraDefinitionsLoaded ? (
+                <p className="text-gray-500 text-sm text-center py-4">Loading cameras...</p>
+              ) : cameraDefinitions.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">No cameras available</p>
               ) : (
                 <div className="space-y-2">
-                  {cameraDefinitions.map((cam) => (
+                  {cameraDefinitions.map((cam, index) => (
                     <div key={cam.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
                       <div className="flex-1">
                         <p className="font-semibold">{cam.name}</p>
-                        <p className="text-xs text-gray-500">Source: {cam.source}</p>
+                        <p className="text-xs text-gray-500">Source: {getCameraSourceLabel(cam, index)}</p>
                         <p className={`text-xs ${cam.isLive ? 'text-green-500' : 'text-gray-500'}`}>
                           {cam.isLive ? '● Live' : '○ Stopped'}
                         </p>

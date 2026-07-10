@@ -43,5 +43,8 @@ class StorageService:
         if record is None:
             return False
 
-        Path(str(record.get("path", ""))).unlink(missing_ok=True)
+        try:
+            Path(str(record.get("path", ""))).unlink(missing_ok=True)
+        except OSError:
+            pass
         return True

@@ -9,8 +9,8 @@ from app.services.storage import StorageService
 alert_service = AlertService()
 auth_service = AuthService()
 camera_service = CameraService()
-fall_detection_service = FallDetectionService(alert_service=alert_service)
+incident_service = IncidentService()
+fall_detection_service = FallDetectionService(alert_service=alert_service, incident_service=incident_service)
 from app.services.frame_loops import FrameLoopService
 frame_loop_service = FrameLoopService()
-incident_service = IncidentService()
 storage_service = StorageService()

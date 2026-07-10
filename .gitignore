@@ -31,7 +31,7 @@ client/dist/
 # Uploads and generated media
 server/uploads/
 server/app/uploads/
-server/data/snapshots/
+server/data/
 *.mp4
 *.avi
 *.mov

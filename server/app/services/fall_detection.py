@@ -86,8 +86,9 @@ class PersonTrack:
 
 
 class FallDetectionService:
-    def __init__(self, alert_service: Any) -> None:
+    def __init__(self, alert_service: Any, incident_service: Any) -> None:
         self._alert_service = alert_service
+        self._incident_service = incident_service
         self._model: PoseLSTM | None = None
         self._model_path: Path | None = None
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -175,6 +176,7 @@ class FallDetectionService:
 
                     fall_probability, is_fall = self._predict_track(track)
                     track.last_fall_probability = fall_probability
+                    is_fall = fall_probability >= self._fall_threshold()
 
                     if not self._is_current_epoch(camera_id, loop_epoch):
                         return emitted_alerts
@@ -183,6 +185,16 @@ class FallDetectionService:
                         track.fall_active = True
                         alert = self._alert_service.record_alert(camera_id, camera_name, fall_probability, person_id=track.label)
                         emitted_alerts.append(alert)
+                        self._incident_service.create_incident(
+                            {
+                                'camera_id': camera_id,
+                                'camera_name': camera_name,
+                                'confidence': fall_probability,
+                                'person_id': track.label,
+                                'person_label': f'Person #{track.label}',
+                            },
+                            frame=frame,
+                        )
                         self._camera_hold_until[camera_id] = time() + ALERT_HOLD_SECONDS
                     elif not is_fall:
                         track.fall_active = False
@@ -364,3 +376,18 @@ class FallDetectionService:
             if camera is not None:
                 camera['color'] = 'red' if camera_is_falling else 'green'
                 camera['confidence_score'] = float(confidence)
+
+    def _fall_threshold(self) -> float:
+        with state.lock:
+            value = state.detection_settings.get('fall_threshold', 0.8)
+
+        try:
+            threshold = float(value)
+        except (TypeError, ValueError):
+            return 0.8
+
+        if threshold < 0.0:
+            return 0.0
+        if threshold > 1.0:
+            return 1.0
+        return threshold
