@@ -163,6 +163,10 @@ class FallDetectionService:
             for detection_index in range(detections):
                 box = tuple(float(value) for value in xyxy[detection_index][:4])
                 person_keypoints = keypoints_xy[detection_index]
+
+                if not self._has_visible_keypoints(person_keypoints):
+                    continue
+
                 track = self._match_track(camera_id, box, frame_index)
                 matched_track_ids.add(track.track_id)
 
@@ -327,6 +331,19 @@ class FallDetectionService:
             features[:, :2] /= norm
 
         return features.reshape(-1)
+
+    @staticmethod
+    def _has_visible_keypoints(person_keypoints: np.ndarray) -> bool:
+        values = np.asarray(person_keypoints, dtype=np.float32)
+        if values.size == 0 or values.shape[0] == 0:
+            return False
+
+        coordinates = values[:, :2]
+        if not np.isfinite(coordinates).any():
+            return False
+
+        visible_points = np.isfinite(coordinates).all(axis=1) & (coordinates[:, 0] > 0.0) & (coordinates[:, 1] > 0.0)
+        return bool(np.any(visible_points))
 
     @staticmethod
     def _intersection_over_union(box_a: tuple[float, float, float, float], box_b: tuple[float, float, float, float]) -> float:
