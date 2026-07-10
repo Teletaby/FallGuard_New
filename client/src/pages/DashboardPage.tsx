@@ -446,7 +446,6 @@ function DashboardPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [manualChatId, setManualChatId] = useState('')
   const [manualName, setManualName] = useState('')
-  const [activeTab, setActiveTab] = useState<'webcam' | 'upload'>('webcam')
   const [feedRefreshKey, setFeedRefreshKey] = useState(() => Date.now())
 
   const alertMapRef = useRef<Map<string, { cameraId: string; timestamp: number }>>(new Map())
@@ -811,9 +810,9 @@ function DashboardPage() {
       }
 
       camera.isLive = true
-      camera.status = 'Monitoring'
+      camera.status = 'Live'
       camera.color = camera.color === 'gray' ? 'green' : camera.color
-      camera.fps = camera.fps || 24
+      camera.fps = camera.fps || 0
       return { success: true, message: 'Camera restarted' }
     }
 
@@ -862,11 +861,11 @@ function DashboardPage() {
           id: cameraId,
           name: `Camera ${videoCameraCount + 1}`,
           stream_name: name,
-          status: 'Looping',
+          status: 'Live',
           color: 'green',
           isLive: true,
           confidence_score: 0.22,
-          fps: 18,
+          fps: 0,
           source: 'Uploaded video file',
           source_kind: 'video',
           preview_url: previewUrl || undefined
@@ -2277,7 +2276,7 @@ function DashboardPage() {
                     cameraDefinitions.map((cam, index) => (
                       <div key={cam.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-bold text-lg">{cam.name}</h4>
+                          <h4 className="font-bold text-lg">{cam.stream_name?.trim() || cam.name}</h4>
                           <span
                             className={`status-badge ${
                               cam.isLive ? (cam.status === 'FALL DETECTED' ? 'bg-red-600' : 'bg-green-600') : 'bg-gray-600'
@@ -2312,96 +2311,83 @@ function DashboardPage() {
 
               <div className="bg-gray-900 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-4">Add Camera Source</h3>
-                <div className="flex gap-2 mb-4">
-                  <button
-                    onClick={() => setActiveTab('webcam')}
-                    className={`flex-1 py-2 rounded-lg font-semibold ${activeTab === 'webcam' ? 'bg-blue-600' : 'bg-gray-700'}`}
-                  >
-                    Webcam/URL
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('upload')}
-                    className={`flex-1 py-2 rounded-lg font-semibold ${activeTab === 'upload' ? 'bg-blue-600' : 'bg-gray-700'}`}
-                  >
-                    Video File
-                  </button>
-                </div>
-
-                {activeTab === 'webcam' ? (
-                  <form onSubmit={addCamera} className="space-y-4">
+                <form onSubmit={addCamera} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Camera Name (e.g., Living Room)"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={cameraName}
+                    onChange={(event) => setCameraName(event.target.value)}
+                    required
+                  />
+                  <div>
                     <input
                       type="text"
-                      placeholder="Camera Name (e.g., Living Room)"
+                      placeholder="Source (0 for webcam, URL, or path)"
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={cameraName}
-                      onChange={(event) => setCameraName(event.target.value)}
+                      value={cameraSource}
+                      onChange={(event) => setCameraSource(event.target.value)}
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-2">Examples: 0, 1, 2 or http://192.168.1.100:8080/video</p>
+                  </div>
+                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
+                    Add Camera
+                  </button>
+                </form>
+              </div>
+
+              <div className="bg-gray-900 rounded-xl p-6 border border-blue-700/40 shadow-lg shadow-blue-950/20">
+                <h3 className="text-lg font-bold mb-2">Add Camera Source (File) Debug</h3>
+                <p className="text-xs text-gray-500 mb-4">Direct file upload to the backend upload API for debugging and verification.</p>
+                <form onSubmit={submitUpload} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Stream Name (e.g., Test Fall Video)"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={uploadName}
+                    onChange={(event) => setUploadName(event.target.value)}
+                    required
+                  />
+                  <div className="w-full">
+                    <label className="block text-sm font-medium mb-2 text-gray-300">Select Video File</label>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer hover:file:bg-blue-700 cursor-pointer"
+                      onChange={(event) => setUploadFile(event.target.files?.[0] || null)}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-2">Supported: MP4, AVI, MOV, MKV (Max 500MB)</p>
+                  </div>
+
+                  {isUploading ? (
                     <div>
-                      <input
-                        type="text"
-                        placeholder="Source (0 for webcam, URL, or path)"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={cameraSource}
-                        onChange={(event) => setCameraSource(event.target.value)}
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-2">Examples: 0, 1, 2 or http://192.168.1.100:8080/video</p>
-                    </div>
-                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
-                      Add Camera
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={submitUpload} className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Stream Name (e.g., Test Fall Video)"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={uploadName}
-                      onChange={(event) => setUploadName(event.target.value)}
-                      required
-                    />
-                    <div className="w-full">
-                      <label className="block text-sm font-medium mb-2 text-gray-300">Select Video File</label>
-                      <input
-                        type="file"
-                        accept="video/*"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer hover:file:bg-blue-700 cursor-pointer"
-                        onChange={(event) => setUploadFile(event.target.files?.[0] || null)}
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-2">Supported: MP4, AVI, MOV, MKV (Max 500MB)</p>
-                    </div>
-
-                    {isUploading ? (
-                      <div>
-                        <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${uploadProgress.percent}%` }}
-                          />
-                        </div>
-                        <p className="text-sm text-gray-400 text-center">{uploadProgress.text}</p>
-                        <button
-                          type="button"
-                          onClick={cancelUpload}
-                          className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition"
-                        >
-                          Cancel Upload
-                        </button>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress.percent}%` }}
+                        />
                       </div>
-                    ) : null}
+                      <p className="text-sm text-gray-400 text-center">{uploadProgress.text}</p>
+                      <button
+                        type="button"
+                        onClick={cancelUpload}
+                        className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition"
+                      >
+                        Cancel Upload
+                      </button>
+                    </div>
+                  ) : null}
 
-                    <button
-                      type="submit"
-                      disabled={isUploading}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-60"
-                    >
-                      {isUploading ? 'Uploading...' : 'Upload & Start Stream'}
-                    </button>
-                  </form>
-                )}
+                  <button
+                    type="submit"
+                    disabled={isUploading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-60"
+                  >
+                    {isUploading ? 'Uploading...' : 'Upload & Start Stream'}
+                  </button>
+                </form>
               </div>
             </div>
           </div>

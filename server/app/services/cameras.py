@@ -26,10 +26,12 @@ class CameraService:
             "source": upload_record["path"],
             "source_kind": "video",
             "isLive": True,
-            "status": "Looping",
+            "status": "Live",
             "playback_mode": "loop",
             "snapshot_url": f"/api/cameras/{camera_id}/snapshot",
             "stream_url": f"/api/cameras/{camera_id}/stream.mjpeg?fps=24",
+            "fps": 0.0,
+            "actual_fps": 0.0,
         }
 
         with state.lock:

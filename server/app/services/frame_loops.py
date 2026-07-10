@@ -36,8 +36,11 @@ class CameraRuntime:
     pose_stats: PoseStats = field(default_factory=PoseStats)
     source_fps: float = 30.0
     target_process_fps: float = 24.0
+    actual_fps: float = 0.0
     frame_index: int = 0
     loop_epoch: int = 0
+    fps_sample_start: float = field(default_factory=perf_counter)
+    fps_sample_frames: int = 0
 
 
 class FrameLoopService:
@@ -80,6 +83,8 @@ class FrameLoopService:
                 'last_frame_at': None,
                 'source_fps': runtime.source_fps,
                 'target_process_fps': runtime.target_process_fps,
+                'actual_fps': 0.0,
+                'fps': 0.0,
                 'pose_process_fps': 0.0,
                 'pose_last_ms': 0.0,
                 'pose_error': None,
@@ -171,12 +176,16 @@ class FrameLoopService:
             runtime.target_process_fps = min(24.0, max(1.0, runtime.source_fps))
             frame_interval = 1.0 / max(1.0, runtime.source_fps)
             next_frame_deadline = perf_counter()
+            runtime.fps_sample_start = perf_counter()
+            runtime.fps_sample_frames = 0
 
             self._set_state(
                 runtime.camera_id,
                 status='starting',
                 source_fps=runtime.source_fps,
                 target_process_fps=runtime.target_process_fps,
+                actual_fps=0.0,
+                fps=0.0,
                 pose_error=None,
             )
 
@@ -197,6 +206,14 @@ class FrameLoopService:
                     break
 
                 runtime.frame_index += 1
+                runtime.fps_sample_frames += 1
+                now = perf_counter()
+                sample_elapsed = now - runtime.fps_sample_start
+                if sample_elapsed >= 1.0:
+                    runtime.actual_fps = runtime.fps_sample_frames / sample_elapsed
+                    runtime.fps_sample_start = now
+                    runtime.fps_sample_frames = 0
+
                 with runtime.frame_lock:
                     runtime.latest_frame = frame.copy()
 
@@ -212,9 +229,11 @@ class FrameLoopService:
 
                 self._set_state(
                     runtime.camera_id,
-                    status='looping' if runtime.loop_on_eof else 'live',
+                    status='Live' if runtime.loop_on_eof else 'Live',
                     frame_index=runtime.frame_index,
                     last_frame_at=time.time(),
+                    actual_fps=runtime.actual_fps,
+                    fps=runtime.actual_fps,
                     source_fps=runtime.source_fps,
                     target_process_fps=runtime.target_process_fps,
                     pose_process_fps=runtime.pose_stats.process_fps,
@@ -285,10 +304,12 @@ class FrameLoopService:
 
                 self._set_state(
                     runtime.camera_id,
-                    status='looping' if runtime.loop_on_eof else 'live',
+                    status='Live' if runtime.loop_on_eof else 'Live',
                     pose_process_fps=runtime.pose_stats.process_fps,
                     pose_last_ms=runtime.pose_stats.last_ms,
                     pose_error=None,
+                    actual_fps=runtime.actual_fps,
+                    fps=runtime.actual_fps,
                     latest_keypoints=runtime.pose_stats.latest_keypoints,
                 )
 
@@ -309,6 +330,10 @@ class FrameLoopService:
             frame_source = state.frame_sources.get(camera_id)
             if frame_source is not None:
                 frame_source.update(updates)
+
+            camera = state.cameras.get(camera_id)
+            if camera is not None:
+                camera.update({key: value for key, value in updates.items() if key in camera or key in {'status', 'fps', 'actual_fps', 'frame_index', 'last_frame_at', 'source_fps', 'target_process_fps', 'pose_process_fps', 'pose_last_ms', 'pose_error', 'latest_keypoints'}})
 
     def _camera_name(self, camera_id: str) -> str:
         with state.lock:

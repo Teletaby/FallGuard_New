@@ -123,9 +123,9 @@ def add_existing_camera() -> dict[str, str]:
             raise HTTPException(status_code=404, detail=f"camera {camera_id} not found")
 
         camera["isLive"] = True
-        camera["status"] = "Looping" if camera.get("source_kind") == "video" else "Monitoring"
+        camera["status"] = "Live" if camera.get("source_kind") == "video" else "Monitoring"
         camera["color"] = "green"
-        camera["fps"] = camera.get("fps") or 24
+        camera["fps"] = camera.get("fps") or 0
 
     if camera.get("source_kind") == "video":
         frame_loop_service.start(camera)
