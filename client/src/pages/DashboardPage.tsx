@@ -316,6 +316,16 @@ const getCameraSourceLabel = (camera: Camera, index: number) => {
   return camera.source || 'Unknown source'
 }
 
+const toIncidentEpoch = (timestamp: string) => {
+  const normalized = timestamp.replace(' ', 'T')
+  const parsed = Date.parse(normalized)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+const sortIncidentsNewestFirst = (incidentList: Incident[]) => {
+  return [...incidentList].sort((a, b) => toIncidentEpoch(b.timestamp) - toIncidentEpoch(a.timestamp))
+}
+
 const buildPlaceholderFeed = (title: string, subtitle: string) => {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
@@ -1519,7 +1529,8 @@ function DashboardPage() {
   const loadIncidents = async () => {
     try {
       const response = await apiCall('/incidents')
-      setIncidents(response.incidents || [])
+      const incidentList = Array.isArray(response.incidents) ? response.incidents : []
+      setIncidents(sortIncidentsNewestFirst(incidentList))
     } catch (error) {
       console.error('Failed to load incidents:', error)
     }
