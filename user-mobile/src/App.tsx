@@ -232,7 +232,7 @@ function HomePage() {
           </div>
           <div className="header-meta">
             <span className="meta-pill">Cameras Online: {activeCount}</span>
-            {notificationState !== 'denied' ? (
+            {/* {notificationState !== 'denied' ? (
               <button
                 className="notify-btn"
                 onClick={requestNotificationPermission}
@@ -242,7 +242,7 @@ function HomePage() {
                 {notificationState === 'default' && 'Enable Fall Notifications'}
                 {notificationState === 'unsupported' && 'Notifications Unsupported'}
               </button>
-            ) : null}
+            ) : null} */}
           </div>
         </header>
 
