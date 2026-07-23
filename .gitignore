@@ -14,6 +14,7 @@ __pycache__/
 # Virtual environments
 .venv/
 .venv*/
+.venv*
 venv/
 
 # Environment files
@@ -25,7 +26,6 @@ node_modules/
 client/node_modules/
 
 # Build outputs
-client/dist/
 client/dist/
 
 # Uploads and generated media
@@ -48,3 +48,5 @@ Thumbs.db
 legacy/
 
 benchmark/
+
+server/legacy_server/
